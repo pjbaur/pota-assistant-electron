@@ -184,12 +184,13 @@ A unified desktop application that:
 | P-002 | View detailed park information in panel | P0 | 🔲 Planned |
 | P-003 | Browse parks on interactive map | P0 | 🔲 Planned |
 | P-004 | Filter parks by state/region/activation status | P1 | 🔲 Planned |
-| P-005 | Sync park database from POTA API | P0 | 🔲 Planned |
-| P-006 | Import parks from CSV file | P1 | 🔲 Planned |
-| P-007 | Cache park data locally (30-day TTL) | P0 | 🔲 Planned |
-| P-008 | Detect and warn about stale data | P1 | 🔲 Planned |
+| P-005 | Import parks from POTA CSV file (primary data source) | P0 | 🔲 Planned |
+| P-006 | Validate CSV format before import | P0 | 🔲 Planned |
+| P-007 | Show import progress with park count | P0 | 🔲 Planned |
+| P-008 | Detect and warn about stale data (30+ days) | P1 | 🔲 Planned |
 | P-009 | Mark parks as favorites | P1 | 🔲 Planned |
 | P-010 | Show park locations on map with markers | P0 | 🔲 Planned |
+| P-011 | Optional: Sync from POTA API (secondary/backup) | P2 | 🔲 Planned |
 
 ### 5.2 Activation Planning
 
@@ -250,7 +251,7 @@ A unified desktop application that:
 | C-001 | Settings screen with all preferences | P0 | 🔲 Planned |
 | C-002 | Profile settings (callsign, grid, location) | P0 | 🔲 Planned |
 | C-003 | Appearance settings (theme, units) | P1 | 🔲 Planned |
-| C-004 | Sync settings (auto-sync, regions) | P1 | 🔲 Planned |
+| C-004 | Import settings (stale warning days) | P1 | 🔲 Planned |
 | C-005 | About screen with version info | P2 | 🔲 Planned |
 
 ### 5.7 User Interface
@@ -277,7 +278,7 @@ A unified desktop application that:
 | D-001 | Embedded SQLite database | P0 | 🔲 Planned |
 | D-002 | Automatic schema migrations | P0 | 🔲 Planned |
 | D-003 | IPC-based data access | P0 | 🔲 Planned |
-| D-004 | Sync state tracking | P1 | 🔲 Planned |
+| D-004 | Import state tracking (date, file, count) | P1 | 🔲 Planned |
 | D-005 | Degraded mode warnings | P1 | 🔲 Planned |
 | D-006 | Offline indicator in UI | P1 | 🔲 Planned |
 
@@ -295,7 +296,7 @@ A unified desktop application that:
 | NFR-P04 | Map render time | First paint | < 500ms |
 | NFR-P05 | Memory usage | Peak | < 500MB |
 | NFR-P06 | Database size | Per 10k parks | < 50MB |
-| NFR-P07 | Sync operation | Full sync | < 5 minutes |
+| NFR-P07 | Park import | Full CSV import | < 30 seconds |
 | NFR-P08 | Window responsiveness | UI thread | 60fps |
 
 ### 6.2 Reliability
@@ -388,18 +389,38 @@ Acceptance Criteria:
 - Has "Create Plan" action button
 ```
 
-#### US-P04: Sync Park Database
+#### US-P04: Import Park Database
 ```
 As a POTA activator
-I want to download the park database to my computer
+I want to import the park database from a POTA CSV file
 So that I can search parks offline
 
 Acceptance Criteria:
-- Sync available from settings and status bar
-- Shows progress dialog during sync
-- Handles network errors gracefully
-- Shows last sync time in status bar
-- Can force full resync
+- Import available from File menu and welcome screen
+- File picker opens to select CSV file
+- Shows progress dialog during import (park count)
+- Validates CSV format before processing
+- Shows last import date in status bar
+- Handles malformed rows gracefully with error report
+```
+
+#### US-P04b: CSV File Format
+```
+The POTA CSV file must have the following columns:
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| reference | string | Yes | Park reference (e.g., "US-0001", "K-0039") |
+| name | string | Yes | Park name |
+| active | boolean | Yes | 1 = active, 0 = inactive |
+| entityId | number | Yes | POTA entity ID |
+| locationDesc | string | Yes | Location description (e.g., "US-ME", "US-AK") |
+| latitude | number | Yes | Decimal degrees |
+| longitude | number | Yes | Decimal degrees |
+| grid | string | Yes | Maidenhead grid square (6-character) |
+
+Example row:
+"US-0001","Acadia National Park","1","291","US-ME","44.31","-68.2034","FN54vh"
 ```
 
 ### 7.2 Epic: Activation Planning
@@ -826,7 +847,7 @@ interface EquipmentItem {
 | `/parks/entity/{entityId}` | GET | Fetch parks by entity | Yes* |
 | `/health` | HEAD | API health check | No |
 
-*Note: As of 2026, POTA API requires authentication for bulk endpoints.
+*Note: CSV import is the primary data source. API access is optional/secondary and requires authentication as of 2026.
 
 **Response Schema (Park):**
 ```json
@@ -873,7 +894,7 @@ forecast_days=7
 | Rate Limit | 429 | Exponential backoff, user notification |
 | Not Found | 404 | Graceful degradation, clear error message |
 | Server Error | 5xx | Retry once, then fail with guidance |
-| Auth Required | 403 | Prompt for API key or suggest CSV import |
+| CSV Parse Error | N/A | Show row number, skip row, continue import |
 
 ---
 
@@ -913,7 +934,7 @@ forecast_days=7
 File
 ├── New Plan...              Cmd+N
 ├── Export Plan...           Cmd+E
-├── Sync Parks               Cmd+R
+├── Import Parks from CSV...
 ├── Import Parks from CSV...
 ├── ─────────────────
 └── Close Window             Cmd+W
@@ -960,7 +981,7 @@ Help
 | `Cmd+F` | Global | Focus search |
 | `Cmd+,` | Global | Open settings |
 | `Cmd+E` | Plan view | Export plan |
-| `Cmd+R` | Global | Sync parks |
+| `Cmd+I` | Global | Import parks from CSV |
 | `Cmd+W` | Global | Close window |
 | `Cmd+Q` | Global | Quit application |
 | `Cmd+B` | Global | Toggle sidebar |
@@ -1088,7 +1109,7 @@ Help
 #### E2E Tests
 - Full application workflows
 - Plan creation end-to-end
-- Sync operation
+- Park import operation
 - Theme switching
 - Window management
 

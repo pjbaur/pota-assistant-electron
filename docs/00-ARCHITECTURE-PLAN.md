@@ -754,17 +754,73 @@ The MVP is complete when a user can:
 
 ### 6.2 Database Schema
 
-Same as CLI architecture - SQLite with the following tables:
+SQLite with the following tables:
 - `users` - User profiles
 - `equipment` - Equipment items
 - `equipment_presets` - Preset configurations
-- `parks` - Park database (synced from POTA.app)
-- `park_notes` - Community notes cache
+- `parks` - Park database (imported from POTA CSV)
+- `import_metadata` - Tracks CSV imports (date, file, row count)
 - `plans` - Activation plans
 - `activations` - Activation history
 - `weather_cache` - Weather forecast cache
 
-### 6.3 IPC Channel Definitions
+### 6.3 Park Data Import (CSV)
+
+**Primary Data Source:** CSV file exported from POTA.app
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     PARK DATA IMPORT FLOW                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. USER DOWNLOADS CSV FROM POTA.APP                           │
+│     └── Export from pota.app → all_parks_ext.csv               │
+│                                                                 │
+│  2. USER IMPORTS VIA APPLICATION                               │
+│     ├── File > Import Parks from CSV...                        │
+│     ├── Drag-and-drop CSV file onto window                     │
+│     └── First-run wizard prompts for initial import            │
+│                                                                 │
+│  3. APPLICATION PROCESSES CSV                                   │
+│     ├── Validate CSV format (required columns)                 │
+│     ├── Parse rows with progress dialog                        │
+│     ├── Insert/update parks in SQLite database                 │
+│     └── Record import metadata (timestamp, file, count)        │
+│                                                                 │
+│  4. STALE DATA WARNING                                          │
+│     └── If last import > 30 days, show warning in status bar   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**CSV Format Specification:**
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| `reference` | string | Yes | Park reference ID (e.g., "US-0001", "K-0039") |
+| `name` | string | Yes | Park name |
+| `active` | number | Yes | 1 = active, 0 = inactive |
+| `entityId` | number | Yes | POTA entity ID |
+| `locationDesc` | string | Yes | Location description (e.g., "US-ME", "US-AK") |
+| `latitude` | number | Yes | Latitude in decimal degrees |
+| `longitude` | number | Yes | Longitude in decimal degrees |
+| `grid` | string | Yes | Maidenhead grid square (6-character) |
+
+**Example CSV Row:**
+```csv
+"reference","name","active","entityId","locationDesc","latitude","longitude","grid"
+"US-0001","Acadia National Park","1","291","US-ME","44.31","-68.2034","FN54vh"
+"US-0002","Alagnak Wild River National Park","1","6","US-AK","59.0908","-156.463","BO19sc"
+```
+
+**Import Validation:**
+- All 8 columns must be present
+- Reference must match pattern: `[A-Z]{2}-\d{4,5}` (e.g., US-0001, K-0039)
+- Coordinates must be valid decimal degrees
+- Grid must be valid 6-character Maidenhead locator
+- Invalid rows are skipped and reported to user
+
+### 6.4 IPC Channel Definitions
 
 ```typescript
 // src/shared/ipc/channels.ts
@@ -773,7 +829,8 @@ export const IPC_CHANNELS = {
   PARKS_SEARCH: 'parks:search',
   PARKS_GET: 'parks:get',
   PARKS_GET_NEARBY: 'parks:get-nearby',
-  PARKS_SYNC: 'parks:sync',
+  PARKS_IMPORT_CSV: 'parks:import-csv',        // Primary import method
+  PARKS_GET_IMPORT_STATUS: 'parks:get-import-status',
   PARKS_TOGGLE_FAVORITE: 'parks:toggle-favorite',
   PARKS_GET_FAVORITES: 'parks:get-favorites',
 
@@ -800,10 +857,11 @@ export const IPC_CHANNELS = {
   SYSTEM_GET_STATUS: 'system:get-status',
   SYSTEM_OPEN_EXTERNAL: 'system:open-external',
   SYSTEM_SELECT_FILE: 'system:select-file',
+  SYSTEM_SELECT_CSV: 'system:select-csv',      // File picker for CSV
 } as const;
 ```
 
-### 6.4 Data Directory Structure
+### 6.5 Data Directory Structure
 
 ```
 ~/Library/Application Support/POTA Planner/  (macOS)
@@ -825,20 +883,49 @@ export const IPC_CHANNELS = {
 
 ## 7. External Service Integration
 
-Same as CLI architecture, with calls made from the main process:
+### 7.1 Park Data Source (CSV Import - Primary)
 
-### 7.1 POTA.app API
-- Park database sync
-- Community notes
-- Activation statistics
+**Source:** CSV file exported from POTA.app website
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PARK DATA SOURCE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  PRIMARY: CSV Import                                            │
+│  ├── User downloads CSV from pota.app                          │
+│  ├── Imports via File menu or drag-and-drop                    │
+│  ├── Full control over when data is updated                    │
+│  └── Works 100% offline after import                           │
+│                                                                 │
+│  CSV Location: User-provided file                              │
+│  Example: ~/Downloads/all_parks_ext.csv                        │
+│                                                                 │
+│  Recommended Update Frequency: Monthly or as needed             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ### 7.2 Weather Service
-- OpenWeatherMap or Open-Meteo
-- Cached locally with TTL
+
+**Provider:** Open-Meteo (no API key required)
+
+- Fetch: On demand when creating/viewing plans
+- Cache TTL: 1 hour for current conditions, 6 hours for forecasts
+- Fallback: Show stale data with warning
+- Works offline with cached data
 
 ### 7.3 Propagation Data (MVP)
+
 - Hardcoded heuristics based on time/season
-- Future: VOACAP integration
+- Future: VOACAP or hamQTH integration
+
+### 7.4 Optional: POTA.app API (Secondary/Future)
+
+- Park database sync (if API access available)
+- Community notes
+- Activation statistics
+- Note: API requires authentication; CSV import is primary method
 
 ---
 
@@ -868,13 +955,11 @@ Same as CLI architecture, with calls made from the main process:
     "dateFormat": "YYYY-MM-DD",
     "timeFormat": "12h"
   },
-  "apiKeys": {
-    "openweathermap": "encrypted:..."
-  },
-  "sync": {
-    "autoSync": true,
-    "syncIntervalHours": 24,
-    "parkRegions": ["US"]
+  "import": {
+    "lastImportDate": "2026-02-20T14:30:00Z",
+    "lastImportFile": "all_parks_ext.csv",
+    "totalParksImported": 51432,
+    "staleWarningDays": 30
   }
 }
 ```
