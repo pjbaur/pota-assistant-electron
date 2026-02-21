@@ -306,6 +306,7 @@ export async function parseCsvFile(
     });
 
     rl.on('close', () => {
+      console.log(`[CSV Parse] Complete: ${result.totalRows} rows, ${result.validRows} valid, ${result.invalidRows} invalid`);
       if (onProgress !== undefined) {
         onProgress({
           phase: 'parsing',

@@ -1,8 +1,8 @@
 -- Add missing columns to plans table
 -- These columns support the enhanced plan functionality
 
--- Add plan_uuid for UUID-based identifiers
-ALTER TABLE plans ADD COLUMN plan_uuid TEXT UNIQUE;
+-- Add plan_uuid for UUID-based identifiers (without UNIQUE - we'll add a unique index instead)
+ALTER TABLE plans ADD COLUMN plan_uuid TEXT;
 
 -- Add name column for plan titles
 ALTER TABLE plans ADD COLUMN name TEXT;
@@ -13,8 +13,8 @@ ALTER TABLE plans ADD COLUMN time_slots TEXT DEFAULT '[]';
 -- Add operator_callsign column
 ALTER TABLE plans ADD COLUMN operator_callsign TEXT;
 
--- Create index for UUID lookups
-CREATE INDEX IF NOT EXISTS idx_plans_uuid ON plans(plan_uuid);
+-- Create unique index for UUID lookups
+CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_uuid ON plans(plan_uuid) WHERE plan_uuid IS NOT NULL;
 
 -- Create index for date-based queries
 CREATE INDEX IF NOT EXISTS idx_plans_date ON plans(activation_date);

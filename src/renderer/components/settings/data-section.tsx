@@ -28,7 +28,8 @@ export function DataSection(): JSX.Element {
   useEffect(() => {
     void searchParks({});
     // TODO: Load last sync date from import metadata when available
-  }, [searchParks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Format last sync date
   const formatSyncDate = (dateStr: string | null): string => {
@@ -57,7 +58,8 @@ export function DataSection(): JSX.Element {
       description: `${count.toLocaleString()} parks imported successfully`,
       variant: 'success',
     });
-  }, [searchParks, addToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToast]);
 
   // Handle clear all data
   const handleClearData = useCallback(async () => {
@@ -87,7 +89,8 @@ export function DataSection(): JSX.Element {
       setIsClearing(false);
       setShowClearConfirm(false);
     }
-  }, [searchParks, addToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToast]);
 
   return (
     <>

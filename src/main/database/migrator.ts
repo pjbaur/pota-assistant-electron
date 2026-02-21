@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { app } from 'electron';
 import { executeAll, executeRun, executeScalar, saveDatabase } from './connection';
 
 /**
@@ -22,7 +23,26 @@ interface MigrationFile {
 }
 
 const MIGRATIONS_TABLE_NAME = 'migrations';
-const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+
+/**
+ * Get the migrations directory path
+ * In development, use the source directory
+ * In production, use the bundled directory
+ */
+function getMigrationsDir(): string {
+  const isDev = process.env['NODE_ENV'] === 'development' || process.env['VITE_DEV_SERVER_URL'] !== undefined;
+
+  if (isDev) {
+    // In development, look for migrations in the source directory
+    // __dirname is dist/main/database, so go up 2 levels to project root, then into src
+    return path.join(__dirname, '..', '..', 'src', 'main', 'database', 'migrations');
+  }
+
+  // In production, migrations should be bundled with the app
+  return path.join(__dirname, 'migrations');
+}
+
+const MIGRATIONS_DIR = getMigrationsDir();
 
 /**
  * Ensure the migrations tracking table exists

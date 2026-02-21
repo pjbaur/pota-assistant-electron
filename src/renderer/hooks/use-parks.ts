@@ -50,14 +50,17 @@ export function useParks(options: UseParksOptions = {}): {
 
   const searchParks = useCallback(
     async (searchFilters: Partial<ParkSearchFilters>): Promise<void> => {
-      setFilters(searchFilters);
       setLoading(true);
       setError(null);
 
+      // Merge new filters with existing ones
+      const mergedFilters = { ...filters, ...searchFilters };
+      setFilters(searchFilters);
+
       const result = await invoke('parks:search', {
-        query: searchFilters.query ?? filters.query,
-        entityId: searchFilters.entity ?? filters.entity,
-        programId: searchFilters.program ?? filters.program,
+        query: mergedFilters.query,
+        entityId: mergedFilters.entity,
+        programId: mergedFilters.program,
         limit: pageSize,
         offset: 0,
       });
@@ -72,7 +75,8 @@ export function useParks(options: UseParksOptions = {}): {
 
       setLoading(false);
     },
-    [filters, pageSize, setFilters, setLoading, setError, invoke, setParks, setTotalResults, setCurrentPage]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pageSize, invoke]
   );
 
   const loadMore = useCallback(async (): Promise<void> => {

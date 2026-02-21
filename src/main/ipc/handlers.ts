@@ -525,6 +525,8 @@ const csvImportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unkno
       broadcastImportProgress
     );
 
+    console.log('[CSV Import] Result:', JSON.stringify(result, null, 2));
+
     // Update completed status
     currentImportStatus = {
       isImporting: false,
@@ -540,7 +542,10 @@ const csvImportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unkno
       totalRows: result.totalRows,
       validRows: result.validRows,
       invalidRows: result.invalidRows,
-      errors: result.errors.slice(0, 100), // Limit errors in response
+      errors: Array.isArray(result.errors) ? result.errors.slice(0, 100).map((e) => ({
+        lineNumber: e.lineNumber,
+        errors: e.errors,
+      })) : [],
     });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
