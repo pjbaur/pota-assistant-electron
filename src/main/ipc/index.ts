@@ -5,6 +5,7 @@
 export {
   registerHandler,
   registerHandlers,
+  registerAppHandlers,
   unregisterHandler,
   unregisterAllHandlers,
   broadcastEvent,

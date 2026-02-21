@@ -180,15 +180,15 @@ A unified desktop application that:
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| P-001 | Search parks by name, reference, or location | P0 | 🔲 Planned |
+| P-001 | Search parks by name, reference, or location | P0 | ✅ Backend Complete |
 | P-002 | View detailed park information in panel | P0 | 🔲 Planned |
 | P-003 | Browse parks on interactive map | P0 | 🔲 Planned |
-| P-004 | Filter parks by state/region/activation status | P1 | 🔲 Planned |
+| P-004 | Filter parks by state/region/activation status | P1 | ✅ Backend Complete |
 | P-005 | Import parks from POTA CSV file (primary data source) | P0 | 🔲 Planned |
 | P-006 | Validate CSV format before import | P0 | 🔲 Planned |
 | P-007 | Show import progress with park count | P0 | 🔲 Planned |
 | P-008 | Detect and warn about stale data (30+ days) | P1 | 🔲 Planned |
-| P-009 | Mark parks as favorites | P1 | 🔲 Planned |
+| P-009 | Mark parks as favorites | P1 | ✅ Backend Complete |
 | P-010 | Show park locations on map with markers | P0 | 🔲 Planned |
 | P-011 | Optional: Sync from POTA API (secondary/backup) | P2 | 🔲 Planned |
 
@@ -196,17 +196,17 @@ A unified desktop application that:
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| A-001 | Create activation plan via wizard | P0 | 🔲 Planned |
-| A-002 | Specify activation date, time, duration | P0 | 🔲 Planned |
-| A-003 | Attach equipment preset to plan | P1 | 🔲 Planned |
-| A-004 | Add custom notes to plan | P1 | 🔲 Planned |
-| A-005 | View plan details with weather and bands | P0 | 🔲 Planned |
-| A-006 | Edit existing plan | P0 | 🔲 Planned |
-| A-007 | Delete plan with confirmation dialog | P0 | 🔲 Planned |
-| A-008 | List plans with status filters in sidebar | P0 | 🔲 Planned |
-| A-009 | Export plan to markdown/text/JSON/PDF | P1 | 🔲 Planned |
+| A-001 | Create activation plan via wizard | P0 | ✅ Backend Complete |
+| A-002 | Specify activation date, time, duration | P0 | ✅ Backend Complete |
+| A-003 | Attach equipment preset to plan | P1 | ✅ Backend Complete |
+| A-004 | Add custom notes to plan | P1 | ✅ Backend Complete |
+| A-005 | View plan details with weather and bands | P0 | ✅ Backend Complete |
+| A-006 | Edit existing plan | P0 | ✅ Backend Complete |
+| A-007 | Delete plan with confirmation dialog | P0 | ✅ Backend Complete |
+| A-008 | List plans with status filters in sidebar | P0 | ✅ Backend Complete |
+| A-009 | Export plan to markdown/text/JSON/PDF | P1 | ✅ Backend Complete (JSON/ADIF) |
 | A-010 | Track plan status (draft/finalized/completed/cancelled) | P1 | 🔲 Planned |
-| A-011 | Cache weather data with plan | P1 | 🔲 Planned |
+| A-011 | Cache weather data with plan | P1 | ✅ Backend Complete |
 | A-012 | Cache band recommendations with plan | P1 | 🔲 Planned |
 
 ### 5.3 Weather Integration
@@ -217,9 +217,9 @@ A unified desktop application that:
 | W-002 | Display 7-day forecast in weather widget | P1 | 🔲 Planned |
 | W-003 | Show temperature, wind, precipitation with icons | P0 | 🔲 Planned |
 | W-004 | Include sunrise/sunset times | P1 | 🔲 Planned |
-| W-005 | Cache weather data (1-hour TTL) | P0 | 🔲 Planned |
-| W-006 | Support imperial and metric units | P1 | 🔲 Planned |
-| W-007 | Clean up expired cache entries | P2 | 🔲 Planned |
+| W-005 | Cache weather data (1-hour TTL) | P0 | ✅ Backend Complete |
+| W-006 | Support imperial and metric units | P1 | ✅ Backend Complete |
+| W-007 | Clean up expired cache entries | P2 | ✅ Backend Complete |
 | W-008 | Display weather alerts prominently | P2 | 🔲 Planned |
 
 ### 5.4 Band Conditions
@@ -237,9 +237,9 @@ A unified desktop application that:
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| E-001 | Provide built-in QRP portable preset | P0 | 🔲 Planned |
-| E-002 | Provide built-in standard portable preset | P0 | 🔲 Planned |
-| E-003 | Provide built-in mobile high-power preset | P0 | 🔲 Planned |
+| E-001 | Provide built-in QRP portable preset | P0 | ✅ Complete |
+| E-002 | Provide built-in standard portable preset | P0 | ✅ Complete |
+| E-003 | Provide built-in mobile high-power preset | P0 | ✅ Complete |
 | E-004 | Display equipment checklist in plan view | P0 | 🔲 Planned |
 | E-005 | Support custom presets | P2 | 🔲 Planned |
 | E-006 | Import/export presets | P3 | 🔲 Planned |
@@ -249,35 +249,35 @@ A unified desktop application that:
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
 | C-001 | Settings screen with all preferences | P0 | 🔲 Planned |
-| C-002 | Profile settings (callsign, grid, location) | P0 | 🔲 Planned |
-| C-003 | Appearance settings (theme, units) | P1 | 🔲 Planned |
-| C-004 | Import settings (stale warning days) | P1 | 🔲 Planned |
+| C-002 | Profile settings (callsign, grid, location) | P0 | ✅ Backend Complete |
+| C-003 | Appearance settings (theme, units) | P1 | ✅ Backend Complete |
+| C-004 | Import settings (stale warning days) | P1 | ✅ Backend Complete |
 | C-005 | About screen with version info | P2 | 🔲 Planned |
 
 ### 5.7 User Interface
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| U-001 | Sidebar navigation with main sections | P0 | 🔲 Planned |
+| U-001 | Sidebar navigation with main sections | P0 | ✅ Complete |
 | U-002 | Park discovery with map and list views | P0 | 🔲 Planned |
 | U-003 | Plan creation wizard (multi-step) | P0 | 🔲 Planned |
 | U-004 | Plan list and detail views | P0 | 🔲 Planned |
 | U-005 | Settings screens | P1 | 🔲 Planned |
-| U-006 | Dark/light theme support | P1 | 🔲 Planned |
+| U-006 | Dark/light theme support | P1 | ✅ Complete |
 | U-007 | Keyboard shortcuts for power users | P1 | 🔲 Planned |
-| U-008 | Native menus (File, Edit, View, etc.) | P1 | 🔲 Planned |
+| U-008 | Native menus (File, Edit, View, etc.) | P1 | ✅ Complete |
 | U-009 | System notifications | P2 | 🔲 Planned |
-| U-010 | Responsive window layouts | P1 | 🔲 Planned |
-| U-011 | Modal dialogs for confirmations | P0 | 🔲 Planned |
-| U-012 | Toast notifications for feedback | P1 | 🔲 Planned |
+| U-010 | Responsive window layouts | P1 | ✅ Complete |
+| U-011 | Modal dialogs for confirmations | P0 | ✅ Complete (Radix Dialog) |
+| U-012 | Toast notifications for feedback | P1 | ✅ Complete |
 
 ### 5.8 Data Management
 
 | ID | Requirement | Priority | Status |
 |----|-------------|----------|--------|
-| D-001 | Embedded SQLite database | P0 | 🔲 Planned |
-| D-002 | Automatic schema migrations | P0 | 🔲 Planned |
-| D-003 | IPC-based data access | P0 | 🔲 Planned |
+| D-001 | Embedded SQLite database | P0 | ✅ Complete (sql.js) |
+| D-002 | Automatic schema migrations | P0 | ✅ Complete |
+| D-003 | IPC-based data access | P0 | ✅ Complete (Zod validation) |
 | D-004 | Import state tracking (date, file, count) | P1 | 🔲 Planned |
 | D-005 | Degraded mode warnings | P1 | 🔲 Planned |
 | D-006 | Offline indicator in UI | P1 | 🔲 Planned |
@@ -1130,27 +1130,29 @@ Help
 
 ## 14. Release Phases
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation — COMPLETE
 
 **Timeline:** Q1 2026
 **Focus:** Core infrastructure
 
 **Tasks:**
-- [ ] Electron + Vite + React setup
-- [ ] IPC communication layer
-- [ ] Database setup with migrations
-- [ ] Basic window and navigation
-- [ ] Theme system
+- [x] Electron + Vite + React setup
+- [x] IPC communication layer (with real handlers and Zod validation)
+- [x] Database setup with migrations (sql.js with auto-migrations)
+- [x] Basic window and navigation (sidebar, routing, layout components)
+- [x] Theme system (dark/light/system toggle)
 
-### Phase 2: Core Features
+### Phase 2: Core Features — IN PROGRESS
 
 **Timeline:** Q1-Q2 2026
 **Focus:** Primary workflows
 
 **Features:**
-- [ ] Park sync from POTA API
-- [ ] Park search and map display
-- [ ] Plan creation wizard
+- [ ] Park CSV import (worker thread with progress UI)
+- [x] Park search backend (repository + IPC handlers)
+- [ ] Park map display (Leaflet integration)
+- [x] Plan CRUD backend (repository + IPC handlers)
+- [ ] Plan creation wizard (multi-step UI)
 - [ ] Plan list and detail views
 - [ ] Settings screens
 
@@ -1170,7 +1172,7 @@ Help
 **Focus:** User experience
 
 **Features:**
-- [ ] Export functionality
+- [x] Export functionality (JSON/ADIF backend handlers complete)
 - [ ] Offline mode indicators
 - [ ] Keyboard shortcuts
 - [ ] System integration

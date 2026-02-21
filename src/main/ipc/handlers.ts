@@ -5,11 +5,17 @@
  * and error handling.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow, dialog } from 'electron';
 import type { ZodType } from 'zod';
 import { IPC_CHANNELS, type IpcChannelName } from '../../shared/ipc/channels';
 import type { IpcResponse, IpcErrorCode } from '../../shared/types';
 import { success, error } from '../../shared/types';
+import * as parkRepo from '../data/repositories/park-repository';
+import * as planRepo from '../data/repositories/plan-repository';
+import * as configRepo from '../data/repositories/config-repository';
+import type { ParkSearchParams } from '../../shared/types/park';
+import type { PlanInput, PlanListParams } from '../../shared/types/plan';
+import type { ConfigUpdate } from '../../shared/types/config';
 
 // ============================================
 // Handler Types
@@ -200,81 +206,340 @@ export function createPlaceholderHandler(channel: IpcChannelName): IpcHandlerFn 
   };
 }
 
+// ============================================
+// Park Handlers
+// ============================================
+
 /**
- * Register all placeholder handlers for development.
+ * Handler for park search
  */
-export function registerPlaceholderHandlers(): void {
-  const placeholderDefinitions: IpcHandlerDefinition[] = [
+const parkSearchHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const searchParams = params as ParkSearchParams;
+  const result = parkRepo.searchParks(searchParams);
+  return success(result);
+};
+
+/**
+ * Handler for getting a single park
+ */
+const parkGetHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { reference } = params as { reference: string };
+  const park = parkRepo.getParkByReference(reference);
+
+  if (park === null) {
+    return error('Park not found', 'NOT_FOUND');
+  }
+
+  return success(park);
+};
+
+/**
+ * Handler for toggling park favorite status
+ */
+const parkToggleFavoriteHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { reference } = params as { reference: string };
+  const result = parkRepo.toggleFavorite(reference);
+
+  if (result === null) {
+    return error('Park not found', 'NOT_FOUND');
+  }
+
+  return success(result);
+};
+
+// ============================================
+// Plan Handlers
+// ============================================
+
+/**
+ * Handler for creating a plan
+ */
+const planCreateHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const input = params as PlanInput;
+  const plan = planRepo.createPlan(input);
+
+  if (plan === null) {
+    return error('Park not found for the given reference', 'NOT_FOUND');
+  }
+
+  return success(plan);
+};
+
+/**
+ * Handler for getting a plan by ID
+ */
+const planGetHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { id } = params as { id: string };
+  const plan = planRepo.getPlanById(id);
+
+  if (plan === null) {
+    return error('Plan not found', 'NOT_FOUND');
+  }
+
+  return success(plan);
+};
+
+/**
+ * Handler for listing plans
+ */
+const planListHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const listParams = params as PlanListParams;
+  const result = planRepo.listPlans(listParams);
+  return success(result);
+};
+
+/**
+ * Handler for updating a plan
+ */
+const planUpdateHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { id, updates } = params as { id: string; updates: Partial<PlanInput> };
+  const plan = planRepo.updatePlan(id, updates);
+
+  if (plan === null) {
+    return error('Plan not found', 'NOT_FOUND');
+  }
+
+  return success(plan);
+};
+
+/**
+ * Handler for deleting a plan
+ */
+const planDeleteHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { id } = params as { id: string };
+  const deleted = planRepo.deletePlan(id);
+
+  if (!deleted) {
+    return error('Plan not found', 'NOT_FOUND');
+  }
+
+  return success({ deleted: true });
+};
+
+/**
+ * Handler for exporting a plan
+ */
+const planExportHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { id, format } = params as { id: string; format: string };
+  const plan = planRepo.getPlanById(id);
+
+  if (plan === null) {
+    return error('Plan not found', 'NOT_FOUND');
+  }
+
+  // Generate export content based on format
+  let content: string;
+  let filename: string;
+
+  switch (format) {
+    case 'json':
+      content = JSON.stringify(plan, null, 2);
+      filename = `activation-plan-${plan.id}.json`;
+      break;
+    case 'adif':
+      // ADIF format would be more complex in real implementation
+      content = `<ADIF_VER:5>3.1.0\n<EOH>\n<PARK_REF:${plan.parkReference.length}>${plan.parkReference}\n`;
+      filename = `activation-plan-${plan.id}.adi`;
+      break;
+    case 'pdf':
+      // PDF generation would require additional libraries
+      return error('PDF export not yet implemented', 'INTERNAL_ERROR');
+    default:
+      return error(`Unsupported export format: ${format}`, 'VALIDATION_ERROR');
+  }
+
+  return success({
+    content,
+    format,
+    filename,
+  });
+};
+
+// ============================================
+// Config Handlers
+// ============================================
+
+/**
+ * Handler for getting config
+ */
+const configGetHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { key } = params as { key?: string };
+
+  if (key !== undefined) {
+    const value = configRepo.getConfigValue(key);
+    return success({ [key]: value });
+  }
+
+  const config = configRepo.getAllConfig();
+  return success(config);
+};
+
+/**
+ * Handler for setting config
+ */
+const configSetHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { updates } = params as { updates: ConfigUpdate };
+  configRepo.setConfigValues(updates);
+
+  // Broadcast config change to all windows
+  broadcastEvent('event:config:changed', updates);
+
+  return success({ updated: true });
+};
+
+// ============================================
+// System Handlers
+// ============================================
+
+/**
+ * Handler for CSV file selection dialog
+ */
+const systemSelectCsvHandler: IpcHandlerFn = async (): Promise<IpcResponse<unknown>> => {
+  const result = await dialog.showOpenDialog({
+    title: 'Select POTA Parks CSV File',
+    filters: [
+      { name: 'CSV Files', extensions: ['csv'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+    properties: ['openFile'],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return success({ canceled: true, filePath: null });
+  }
+
+  return success({ canceled: false, filePath: result.filePaths[0] });
+};
+
+// ============================================
+// Weather Handler (Phase 3 - placeholder)
+// ============================================
+
+/**
+ * Handler for weather requests - Phase 3 implementation needed
+ */
+const weatherGetHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  return error(
+    'Weather service not yet implemented. This is a Phase 3 feature.',
+    'INTERNAL_ERROR'
+  );
+};
+
+// ============================================
+// CSV Import Handlers (Phase 2 - placeholder)
+// ============================================
+
+/**
+ * Handler for CSV import - Phase 2 implementation needed
+ */
+const csvImportHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  return error(
+    'CSV import not yet implemented. This is a Phase 2 feature.',
+    'INTERNAL_ERROR'
+  );
+};
+
+/**
+ * Handler for CSV import status - Phase 2 implementation needed
+ */
+const csvImportStatusHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  // Return idle status for now
+  return success({
+    isImporting: false,
+    recordsProcessed: 0,
+    totalRecords: 0,
+    phase: 'idle',
+  });
+};
+
+// ============================================
+// Register All Handlers
+// ============================================
+
+/**
+ * Register all IPC handlers for the application.
+ * Replaces placeholder handlers with real implementations.
+ */
+export function registerAppHandlers(): void {
+  const handlerDefinitions: IpcHandlerDefinition[] = [
     // Park operations
     {
       channel: IPC_CHANNELS.PARKS_SEARCH,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PARKS_SEARCH),
+      handler: parkSearchHandler,
     },
     {
       channel: IPC_CHANNELS.PARKS_GET,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PARKS_GET),
+      handler: parkGetHandler,
     },
     {
       channel: IPC_CHANNELS.PARKS_IMPORT_CSV,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PARKS_IMPORT_CSV),
+      handler: csvImportHandler,
     },
     {
       channel: IPC_CHANNELS.PARKS_GET_IMPORT_STATUS,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PARKS_GET_IMPORT_STATUS),
+      handler: csvImportStatusHandler,
     },
     {
       channel: IPC_CHANNELS.PARKS_TOGGLE_FAVORITE,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PARKS_TOGGLE_FAVORITE),
+      handler: parkToggleFavoriteHandler,
     },
 
     // Plan operations
     {
       channel: IPC_CHANNELS.PLANS_CREATE,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_CREATE),
+      handler: planCreateHandler,
     },
     {
       channel: IPC_CHANNELS.PLANS_GET,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_GET),
+      handler: planGetHandler,
     },
     {
       channel: IPC_CHANNELS.PLANS_LIST,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_LIST),
+      handler: planListHandler,
     },
     {
       channel: IPC_CHANNELS.PLANS_UPDATE,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_UPDATE),
+      handler: planUpdateHandler,
     },
     {
       channel: IPC_CHANNELS.PLANS_DELETE,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_DELETE),
+      handler: planDeleteHandler,
     },
     {
       channel: IPC_CHANNELS.PLANS_EXPORT,
-      handler: createPlaceholderHandler(IPC_CHANNELS.PLANS_EXPORT),
+      handler: planExportHandler,
     },
 
     // Weather
     {
       channel: IPC_CHANNELS.WEATHER_GET,
-      handler: createPlaceholderHandler(IPC_CHANNELS.WEATHER_GET),
+      handler: weatherGetHandler,
     },
 
     // Configuration
     {
       channel: IPC_CHANNELS.CONFIG_GET,
-      handler: createPlaceholderHandler(IPC_CHANNELS.CONFIG_GET),
+      handler: configGetHandler,
     },
     {
       channel: IPC_CHANNELS.CONFIG_SET,
-      handler: createPlaceholderHandler(IPC_CHANNELS.CONFIG_SET),
+      handler: configSetHandler,
     },
 
     // System
     {
       channel: IPC_CHANNELS.SYSTEM_SELECT_CSV,
-      handler: createPlaceholderHandler(IPC_CHANNELS.SYSTEM_SELECT_CSV),
+      handler: systemSelectCsvHandler,
     },
   ];
 
-  registerHandlers(placeholderDefinitions);
+  registerHandlers(handlerDefinitions);
+}
+
+/**
+ * @deprecated Use registerAppHandlers() instead.
+ * Register all placeholder handlers for development.
+ */
+export function registerPlaceholderHandlers(): void {
+  registerAppHandlers();
 }
