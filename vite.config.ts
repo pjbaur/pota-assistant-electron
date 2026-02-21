@@ -51,6 +51,29 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core
+          'vendor-react': ['react', 'react-dom'],
+          // Routing
+          'vendor-router': ['react-router-dom'],
+          // Map libraries (heavy, only load on parks pages)
+          'vendor-leaflet': ['leaflet', 'react-leaflet', 'react-leaflet-cluster', 'leaflet.markercluster'],
+          // UI components
+          'vendor-radix': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ],
+          // State management
+          'vendor-state': ['zustand', 'zod'],
+          // Forms
+          'vendor-forms': ['react-hook-form'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

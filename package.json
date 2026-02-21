@@ -2,6 +2,7 @@
   "name": "pota-activation-planner",
   "version": "0.1.0",
   "description": "Parks on the Air activation planning desktop application",
+  "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
