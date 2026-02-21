@@ -174,8 +174,14 @@ function loadRenderer(): void {
   } else {
     // Load from built files in production
     const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+    console.log('Loading renderer from:', rendererPath);
+    console.log('__dirname:', __dirname);
     mainWindow
       .loadFile(rendererPath)
+      .then(() => {
+        // Open DevTools for debugging
+        mainWindow?.webContents.openDevTools({ mode: 'right' });
+      })
       .catch((error: unknown) => console.error('Failed to load renderer:', error));
   }
 }
@@ -230,10 +236,8 @@ app.on('window-all-closed', () => {
   // Save and close database before quitting
   closeDatabase();
 
-  // On macOS, apps typically stay open until explicitly quit
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Quit the app when all windows are closed
+  app.quit();
 });
 
 // App lifecycle: Before quit
