@@ -5,13 +5,29 @@ A cross-platform desktop application for amateur radio operators to plan Parks o
 ## Features
 
 ### Core Capabilities
-- **Park Discovery** — Interactive map with 88,000+ POTA parks worldwide
-- **Activation Planning** — Step-by-step wizard for creating detailed activation plans
+- **Park Discovery** — Interactive map with 88,000+ POTA parks worldwide using Leaflet with clustering
+- **Park CSV Import** — Import park data from POTA CSV files with progress tracking
+- **Activation Planning** — 5-step wizard for creating detailed activation plans
+- **Plan Management** — List, filter, sort, and view detailed activation plans
 - **Weather Forecasts** — Integration with Open-Meteo for weather data at activation sites
 - **Band Recommendations** — Time-aware propagation suggestions based on heuristics
 - **Equipment Management** — Built-in presets (QRP Portable, Standard Portable, Mobile High Power)
-- **Plan Export** — Export activation plans to Markdown, text, or JSON formats
+- **Plan Export** — Export activation plans to JSON or ADIF formats
 - **Offline-First** — Full functionality after initial park data import
+
+### Implemented Features
+
+| Feature | Status |
+|---------|--------|
+| Park CSV import with progress UI | Complete |
+| Interactive park map with Leaflet | Complete |
+| Park detail view | Complete |
+| Plan creation wizard (5 steps) | Complete |
+| Plan list with filtering/sorting | Complete |
+| Plan detail view with export | Complete |
+| Enhanced settings (profile, appearance, data) | Complete |
+| Weather service backend | Complete |
+| Band recommendations | Complete |
 
 ### Designed For
 - Parks on the Air (POTA) participants
@@ -21,7 +37,7 @@ A cross-platform desktop application for amateur radio operators to plan Parks o
 
 ## Screenshots
 
-> Coming soon — application is in active development
+> Coming soon
 
 ## Requirements
 
@@ -51,15 +67,21 @@ On first launch, import park data via **File → Import Parks from CSV**. Downlo
 1. Navigate to **Parks** in the sidebar
 2. Browse the interactive map or use search filters
 3. Click a park marker to view details
-4. Add parks to your activation shortlist
+4. Start planning an activation from the park detail view
 
 ### Creating an Activation Plan
-1. Go to **Plans → New Plan**
-2. Select your target park
-3. Choose your activation date/time
-4. Review weather forecast and band recommendations
-5. Select equipment preset or customize your loadout
-6. Save and export your plan
+1. Go to **New Plan** or click "Create Plan" from a park detail page
+2. **Step 1: Select Park** — Search and choose your target park
+3. **Step 2: Date & Time** — Pick your activation date and duration
+4. **Step 3: Bands** — Review band recommendations for your time slot
+5. **Step 4: Equipment** — Select an equipment preset
+6. **Step 5: Review** — Confirm and save your plan
+
+### Managing Plans
+- View all plans in the **Plans** section
+- Filter by status (all, upcoming, past)
+- Sort by date or park name
+- Export individual plans to JSON or ADIF
 
 ### Equipment Presets
 Built-in presets for common activation scenarios:
@@ -101,6 +123,7 @@ pota-activation-planner/
 ├── docs/                          # Architecture and planning documents
 │   ├── 00-ARCHITECTURE-PLAN.md    # Technical architecture specification
 │   ├── 01-PRD.md                  # Product requirements document
+│   ├── 02-UI-ARCHITECTURE-ANALYSIS.md  # Interface design
 │   └── plans/                     # Implementation roadmaps
 │
 ├── src/
@@ -110,6 +133,9 @@ pota-activation-planner/
 │   │   │   ├── connection.ts      # Connection manager
 │   │   │   ├── migrator.ts        # Migration runner
 │   │   │   └── migrations/        # SQL migration files
+│   │   ├── data/                  # Data layer
+│   │   │   └── repositories/      # Data access objects
+│   │   ├── services/              # Business logic services
 │   │   ├── ipc/                   # IPC handlers
 │   │   └── utils/                 # Main process utilities
 │   │
@@ -118,7 +144,10 @@ pota-activation-planner/
 │   │
 │   ├── renderer/                  # React frontend
 │   │   ├── components/            # React components
-│   │   │   ├── layout/            # Layout components
+│   │   │   ├── layout/            # Layout components (Sidebar, Header)
+│   │   │   ├── parks/             # Park-related components
+│   │   │   ├── plans/             # Plan components + wizard
+│   │   │   ├── settings/          # Settings sections
 │   │   │   └── ui/                # Base UI components (Radix + Tailwind)
 │   │   ├── pages/                 # Route pages
 │   │   ├── hooks/                 # Custom React hooks
@@ -154,12 +183,24 @@ pota-activation-planner/
 ```typescript
 // Typed channels with Zod validation
 export const IPC_CHANNELS = {
-  SEARCH_PARKS: 'parks:search',
-  GET_PARK: 'parks:get',
-  SYNC_PARKS: 'parks:sync',
-  CREATE_PLAN: 'plans:create',
-  GET_PLAN: 'plans:get',
-  EXPORT_PLAN: 'plans:export',
+  // Parks
+  PARKS_SEARCH: 'parks:search',
+  PARKS_GET: 'parks:get',
+  PARKS_IMPORT_CSV: 'parks:import-csv',
+  PARKS_TOGGLE_FAVORITE: 'parks:toggle-favorite',
+
+  // Plans
+  PLANS_CREATE: 'plans:create',
+  PLANS_GET: 'plans:get',
+  PLANS_LIST: 'plans:list',
+  PLANS_UPDATE: 'plans:update',
+  PLANS_DELETE: 'plans:delete',
+  PLANS_EXPORT: 'plans:export',
+
+  // Weather & Config
+  WEATHER_GET: 'weather:get',
+  CONFIG_GET: 'config:get',
+  CONFIG_SET: 'config:set',
 } as const;
 ```
 
@@ -191,8 +232,7 @@ Application data is stored in platform-specific locations:
 | Zustand | State management |
 | React Router | Client-side routing |
 | React Hook Form + Zod | Form handling and validation |
-| Leaflet | Interactive maps |
-| react-leaflet | React bindings for Leaflet |
+| Leaflet + React Leaflet | Interactive maps with clustering |
 
 ### Backend (Main Process)
 | Technology | Purpose |
@@ -244,9 +284,9 @@ The application is designed to work offline after initial park data import. Weat
 | Memory usage (active) | < 500MB |
 | Installed size | < 250MB |
 
-## Current Status
+## Project Status
 
-**Phase 1 (Foundation) — Complete**
+### Phase 1: Foundation — Complete
 
 The following infrastructure is in place:
 - Electron main process with security hardening
@@ -255,16 +295,30 @@ The following infrastructure is in place:
 - React application with routing and layout
 - Base UI components (Button, Input, Dialog, Toast, Select, Tooltip)
 - Zustand stores for state management
+- Native menus with keyboard shortcuts
 
-**In Progress / Planned**
-- Park CSV import service
+### Phase 2: Core Features — Complete
+
+The following features are implemented:
+- Park CSV import service with progress UI
 - Park search functionality
-- Interactive map component
-- Plan creation wizard
-- Weather service integration
-- Band recommendation engine
-- Plan export functionality
-- Settings persistence
+- Interactive map with Leaflet and clustering
+- Plan creation wizard (5 steps)
+- Plan list with filtering and sorting
+- Plan detail view with export
+- Park detail view
+- Enhanced settings (profile, appearance, data)
+- Weather service backend
+- Band recommendation logic
+
+### Phase 3: Polish — Planned
+
+Upcoming improvements:
+- Offline mode indicators
+- Extended keyboard shortcuts
+- System integration (notifications, dock menus)
+- Auto-update functionality
+- PDF and markdown export
 
 See [docs/plans/](docs/plans/) for detailed implementation roadmaps.
 
