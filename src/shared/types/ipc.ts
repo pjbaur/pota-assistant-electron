@@ -87,6 +87,7 @@ export interface IpcRequestMap {
 
   // System
   'system:select:csv': void;
+  'system:open:external': { url: string };
 }
 
 /** Map of channel names to their response types */
@@ -94,7 +95,14 @@ export interface IpcResponseMap {
   // Park operations
   'parks:search': ParkSearchResult;
   'parks:get': Park | null;
-  'parks:import:csv': { imported: number; skipped: number };
+  'parks:import:csv': {
+    imported: number;
+    skipped: number;
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    errors: Array<{ lineNumber: number; errors: string[] }>;
+  };
   'parks:import:status': CsvImportStatus;
   'parks:favorite:toggle': ToggleFavoriteResult;
 
@@ -115,6 +123,7 @@ export interface IpcResponseMap {
 
   // System
   'system:select:csv': { canceled: boolean; filePath?: string };
+  'system:open:external': { opened: boolean };
 }
 
 /** Type-safe channel names */

@@ -5,15 +5,16 @@
  * and error handling.
  */
 
-import { ipcMain, BrowserWindow, dialog } from 'electron';
+import { ipcMain, BrowserWindow, dialog, shell } from 'electron';
 import type { ZodType } from 'zod';
-import { IPC_CHANNELS, type IpcChannelName } from '../../shared/ipc/channels';
+import { IPC_CHANNELS, IPC_EVENT_CHANNELS, type IpcChannelName } from '../../shared/ipc/channels';
 import type { IpcResponse, IpcErrorCode } from '../../shared/types';
 import { success, error } from '../../shared/types';
 import * as parkRepo from '../data/repositories/park-repository';
 import * as planRepo from '../data/repositories/plan-repository';
 import * as configRepo from '../data/repositories/config-repository';
-import type { ParkSearchParams } from '../../shared/types/park';
+import * as csvImportService from '../services/csv-import-service';
+import type { ParkSearchParams, CsvImportStatus } from '../../shared/types/park';
 import type { PlanInput, PlanListParams } from '../../shared/types/plan';
 import type { ConfigUpdate } from '../../shared/types/config';
 
@@ -411,6 +412,21 @@ const systemSelectCsvHandler: IpcHandlerFn = async (): Promise<IpcResponse<unkno
   return success({ canceled: false, filePath: result.filePaths[0] });
 };
 
+/**
+ * Handler for opening external URLs
+ */
+const systemOpenExternalHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unknown>> => {
+  const { url } = params as { url: string };
+
+  try {
+    await shell.openExternal(url);
+    return success({ opened: true });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return error(`Failed to open URL: ${errorMessage}`, 'INTERNAL_ERROR');
+  }
+};
+
 // ============================================
 // Weather Handler (Phase 3 - placeholder)
 // ============================================
@@ -426,30 +442,133 @@ const weatherGetHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
 };
 
 // ============================================
-// CSV Import Handlers (Phase 2 - placeholder)
+// CSV Import State
 // ============================================
 
-/**
- * Handler for CSV import - Phase 2 implementation needed
- */
-const csvImportHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
-  return error(
-    'CSV import not yet implemented. This is a Phase 2 feature.',
-    'INTERNAL_ERROR'
-  );
+/** Current import status state */
+let currentImportStatus: CsvImportStatus = {
+  isImporting: false,
+  recordsProcessed: 0,
+  totalRecords: 0,
+  phase: 'idle',
 };
 
 /**
- * Handler for CSV import status - Phase 2 implementation needed
+ * Broadcast import progress to all windows
  */
-const csvImportStatusHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
-  // Return idle status for now
-  return success({
-    isImporting: false,
+function broadcastImportProgress(progress: csvImportService.ProgressCallback extends (p: infer P) => void ? P : never): void {
+  currentImportStatus = {
+    isImporting: progress.phase !== 'completed' && progress.phase !== 'error',
+    recordsProcessed: progress.recordsProcessed,
+    totalRecords: progress.totalRecords,
+    phase: progress.phase,
+    error: progress.phase === 'error' ? progress.message : undefined,
+  };
+
+  const windows = BrowserWindow.getAllWindows();
+  for (const window of windows) {
+    window.webContents.send(IPC_EVENT_CHANNELS.PARKS_IMPORT_PROGRESS, currentImportStatus);
+  }
+}
+
+// ============================================
+// CSV Import Handlers
+// ============================================
+
+/**
+ * Handler for CSV import
+ */
+const csvImportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unknown>> => {
+  const { filePath } = params as { filePath: string };
+
+  // Check if import is already in progress
+  if (currentImportStatus.isImporting) {
+    return error('An import is already in progress', 'IMPORT_IN_PROGRESS');
+  }
+
+  // Reset status
+  currentImportStatus = {
+    isImporting: true,
     recordsProcessed: 0,
     totalRecords: 0,
-    phase: 'idle',
-  });
+    phase: 'reading',
+    startedAt: new Date().toISOString(),
+  };
+
+  try {
+    // Create batch insert function
+    const insertBatch = (parks: csvImportService.ParsedPark[]): number => {
+      let inserted = 0;
+      for (const park of parks) {
+        parkRepo.insertPark({
+          reference: park.reference,
+          name: park.name,
+          latitude: park.latitude,
+          longitude: park.longitude,
+          grid_square: park.grid_square,
+          state: park.state,
+          country: park.country,
+          entity_id: park.entity_id,
+          location_desc: park.location_desc,
+          is_active: park.is_active,
+          is_favorite: park.is_favorite,
+        });
+        inserted++;
+      }
+      return inserted;
+    };
+
+    // Run import with progress reporting
+    const result = await csvImportService.importParksFromCsv(
+      filePath,
+      insertBatch,
+      broadcastImportProgress
+    );
+
+    // Update completed status
+    currentImportStatus = {
+      isImporting: false,
+      recordsProcessed: result.imported,
+      totalRecords: result.validRows,
+      phase: 'completed',
+      completedAt: new Date().toISOString(),
+    };
+
+    return success({
+      imported: result.imported,
+      skipped: result.skipped,
+      totalRows: result.totalRows,
+      validRows: result.validRows,
+      invalidRows: result.invalidRows,
+      errors: result.errors.slice(0, 100), // Limit errors in response
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
+    currentImportStatus = {
+      isImporting: false,
+      recordsProcessed: 0,
+      totalRecords: 0,
+      phase: 'error',
+      error: errorMessage,
+    };
+
+    broadcastImportProgress({
+      phase: 'error',
+      recordsProcessed: 0,
+      totalRecords: 0,
+      message: errorMessage,
+    });
+
+    return error(`Import failed: ${errorMessage}`, 'FILE_ERROR');
+  }
+};
+
+/**
+ * Handler for CSV import status
+ */
+const csvImportStatusHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  return success(currentImportStatus);
 };
 
 // ============================================
@@ -530,6 +649,10 @@ export function registerAppHandlers(): void {
     {
       channel: IPC_CHANNELS.SYSTEM_SELECT_CSV,
       handler: systemSelectCsvHandler,
+    },
+    {
+      channel: IPC_CHANNELS.SYSTEM_OPEN_EXTERNAL,
+      handler: systemOpenExternalHandler,
     },
   ];
 

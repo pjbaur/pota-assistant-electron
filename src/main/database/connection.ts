@@ -1,8 +1,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const initSqlJs = require('sql.js');
+import initSqlJs from 'sql.js';
 import type { Database, SqlJsStatic } from 'sql.js';
 
 /**

@@ -30,6 +30,7 @@ export const IPC_CHANNELS = {
 
   // System
   SYSTEM_SELECT_CSV: 'system:select:csv',
+  SYSTEM_OPEN_EXTERNAL: 'system:open:external',
 } as const;
 
 /** Type for valid channel names */

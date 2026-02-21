@@ -24,6 +24,7 @@ import {
   weatherRequestParamsSchema,
   configGetParamsSchema,
   configSetParamsSchema,
+  openExternalParamsSchema,
 } from '../shared/ipc';
 import type {
   IpcChannel,
@@ -58,6 +59,7 @@ const requestSchemaMap = {
   [IPC_CHANNELS.CONFIG_SET]: configSetParamsSchema,
 
   [IPC_CHANNELS.SYSTEM_SELECT_CSV]: undefined,
+  [IPC_CHANNELS.SYSTEM_OPEN_EXTERNAL]: openExternalParamsSchema,
 } as const;
 
 // ============================================

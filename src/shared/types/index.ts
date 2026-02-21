@@ -24,6 +24,8 @@ export type {
   PlanListResult,
   EquipmentPreset,
   TimeSlot,
+  BandId,
+  PlanStatus,
   ExportFormat,
   PlanExportResult,
 } from './plan';

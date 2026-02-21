@@ -40,6 +40,9 @@ export {
   configGetParamsSchema,
   configSetParamsSchema,
 
+  // System schemas
+  openExternalParamsSchema,
+
   // Response schemas
   ipcErrorSchema,
   successResponseSchema,

@@ -4,6 +4,9 @@
 
 import type { ISODateString, ParkReference } from './park';
 
+/** Amateur radio band identifiers */
+export type BandId = '80m' | '60m' | '40m' | '30m' | '20m' | '17m' | '15m' | '12m' | '10m' | '6m' | '2m';
+
 /** Unique identifier for a plan */
 export type PlanId = string & { readonly __brand: unique symbol };
 
@@ -66,6 +69,8 @@ export interface PlanInput {
   endTime: string;
   /** Selected equipment preset */
   equipmentPreset?: EquipmentPreset;
+  /** Planned bands */
+  bands: BandId[];
   /** Planned time slots */
   timeSlots: TimeSlot[];
   /** Operator callsign */
@@ -78,6 +83,8 @@ export interface PlanInput {
 export interface Plan extends PlanInput {
   /** Unique plan identifier */
   id: PlanId;
+  /** Plan status */
+  status: PlanStatus;
   /** ISO date when plan was created */
   createdAt: ISODateString;
   /** ISO date when plan was last modified */
@@ -107,6 +114,9 @@ export interface PlanListResult {
   /** Whether there are more results available */
   hasMore: boolean;
 }
+
+/** Plan status */
+export type PlanStatus = 'draft' | 'finalized' | 'completed' | 'cancelled';
 
 /** Export format options */
 export type ExportFormat = 'json' | 'adif' | 'pdf';

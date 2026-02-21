@@ -1,7 +1,225 @@
-import { Link } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
+import {
+  WizardContainer,
+  WIZARD_STEPS,
+  StepPark,
+  StepDatetime,
+  StepEquipment,
+  StepBands,
+  StepReview,
+  type DateTimeData,
+} from '../components/plans/wizard';
+import { usePlanStore, type WizardStep } from '../stores/plan-store';
+import { usePlans, usePlan } from '../hooks/use-plans';
+import type { Park, EquipmentPreset, BandId, PlanInput } from '@shared/types';
 
 export function NewPlan(): JSX.Element {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planId = searchParams.get('edit');
+
+  const isEditing = planId !== null;
+
+  const { wizard, setWizardStep, completeWizardStep, resetWizard } =
+    usePlanStore();
+  const { createPlan, updatePlan } = usePlans();
+  const { plan: existingPlan, fetchPlan } = usePlan(planId);
+
+  // Form state
+  const [selectedPark, setSelectedPark] = useState<Park | null>(null);
+  const [datetime, setDatetime] = useState<DateTimeData>({
+    date: '',
+    startTime: '09:00',
+    endTime: '12:00',
+  });
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPreset | null>(null);
+  const [selectedBands, setSelectedBands] = useState<BandId[]>([]);
+  const [notes, setNotes] = useState('');
+
+  // Load existing plan for editing
+  useEffect(() => {
+    if (isEditing && planId) {
+      void fetchPlan();
+    }
+  }, [isEditing, planId, fetchPlan]);
+
+  // Populate form when existing plan loads
+  useEffect(() => {
+    if (existingPlan) {
+      // The park needs to be fetched separately or stored with the plan
+      // For now, we'll create a minimal park object from the reference
+      setSelectedPark({
+        reference: existingPlan.parkReference,
+        name: existingPlan.name,
+        entityId: 'US',
+        gridSquare: '' as never,
+        latitude: 0,
+        longitude: 0,
+        programId: '',
+        activationCount: 0,
+        isFavorite: false,
+        updatedAt: '' as never,
+      });
+      setDatetime({
+        date: existingPlan.activationDate,
+        startTime: existingPlan.startTime,
+        endTime: existingPlan.endTime,
+      });
+      setSelectedEquipment(existingPlan.equipmentPreset ?? null);
+      setSelectedBands(existingPlan.bands ?? []);
+      setNotes(existingPlan.notes ?? '');
+    }
+  }, [existingPlan]);
+
+  // Reset wizard on unmount
+  useEffect(() => {
+    return () => {
+      resetWizard();
+    };
+  }, [resetWizard]);
+
+  const handleCancel = useCallback(() => {
+    resetWizard();
+  }, [resetWizard]);
+
+  const handleGoToStep = useCallback(
+    (step: WizardStep) => {
+      setWizardStep(step);
+    },
+    [setWizardStep]
+  );
+
+  // Validation for each step
+  const canProceed = useMemo(() => {
+    switch (wizard.currentStep) {
+      case 'park':
+        return selectedPark !== null;
+      case 'datetime':
+        return datetime.date !== '' && datetime.startTime !== '' && datetime.endTime !== '';
+      case 'equipment':
+        return true; // Equipment is optional
+      case 'bands':
+        return selectedBands.length > 0;
+      case 'review':
+        return true;
+      default:
+        return false;
+    }
+  }, [wizard.currentStep, selectedPark, datetime, selectedBands]);
+
+  const handleNext = useCallback(() => {
+    completeWizardStep(wizard.currentStep);
+    const currentIndex = WIZARD_STEPS.findIndex((s) => s.step === wizard.currentStep);
+    const nextStep = WIZARD_STEPS[currentIndex + 1];
+    if (nextStep) {
+      setWizardStep(nextStep.step);
+    }
+  }, [wizard.currentStep, completeWizardStep, setWizardStep]);
+
+  const handleBack = useCallback(() => {
+    const currentIndex = WIZARD_STEPS.findIndex((s) => s.step === wizard.currentStep);
+    const prevStep = WIZARD_STEPS[currentIndex - 1];
+    if (prevStep) {
+      setWizardStep(prevStep.step);
+    }
+  }, [wizard.currentStep, setWizardStep]);
+
+  const handleCreate = useCallback(() => {
+    if (!selectedPark) return;
+
+    const planData: PlanInput = {
+      name: `${selectedPark.name} Activation`,
+      parkReference: selectedPark.reference,
+      activationDate: datetime.date as never,
+      startTime: datetime.startTime,
+      endTime: datetime.endTime,
+      equipmentPreset: selectedEquipment ?? undefined,
+      bands: selectedBands,
+      timeSlots: [],
+      notes: notes || undefined,
+    };
+
+    void (async () => {
+      try {
+        if (isEditing && planId) {
+          await updatePlan(planId, planData);
+        } else {
+          const newPlan = await createPlan(planData);
+          if (!newPlan) {
+            throw new Error('Failed to create plan');
+          }
+        }
+        resetWizard();
+        navigate('/plans');
+      } catch (error) {
+        console.error('Failed to save plan:', error);
+      }
+    })();
+  }, [
+    selectedPark,
+    datetime,
+    selectedEquipment,
+    selectedBands,
+    notes,
+    isEditing,
+    planId,
+    createPlan,
+    updatePlan,
+    resetWizard,
+    navigate,
+  ]);
+
+  const handleParkSelect = useCallback((park: Park) => {
+    setSelectedPark(park);
+  }, []);
+
+  const handleDatetimeChange = useCallback((data: DateTimeData) => {
+    setDatetime(data);
+  }, []);
+
+  const handlePresetSelect = useCallback((preset: EquipmentPreset) => {
+    setSelectedEquipment(preset);
+  }, []);
+
+  const handleBandsChange = useCallback((bands: BandId[]) => {
+    setSelectedBands(bands);
+  }, []);
+
+  const handleNotesChange = useCallback((newNotes: string) => {
+    setNotes(newNotes);
+  }, []);
+
+  const renderStep = () => {
+    switch (wizard.currentStep) {
+      case 'park':
+        return <StepPark selectedPark={selectedPark} onParkSelect={handleParkSelect} />;
+      case 'datetime':
+        return <StepDatetime data={datetime} onChange={handleDatetimeChange} />;
+      case 'equipment':
+        return (
+          <StepEquipment selectedPreset={selectedEquipment} onPresetSelect={handlePresetSelect} />
+        );
+      case 'bands':
+        return <StepBands selectedBands={selectedBands} onBandsChange={handleBandsChange} />;
+      case 'review':
+        return (
+          <StepReview
+            park={selectedPark}
+            datetime={datetime}
+            equipment={selectedEquipment}
+            bands={selectedBands}
+            notes={notes}
+            onNotesChange={handleNotesChange}
+            onEditStep={handleGoToStep}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -30,108 +248,29 @@ export function NewPlan(): JSX.Element {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            New Activation Plan
+            {isEditing ? 'Edit Activation Plan' : 'New Activation Plan'}
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Create a new activation plan using the step-by-step wizard
+            {isEditing
+              ? 'Modify your activation plan details'
+              : 'Create a new activation plan using the step-by-step wizard'}
           </p>
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <StepIndicator step={1} label="Select Park" isActive />
-            <StepIndicator step={2} label="Date & Time" />
-            <StepIndicator step={3} label="Equipment" />
-            <StepIndicator step={4} label="Bands" />
-            <StepIndicator step={5} label="Review" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-slate-400"
-              >
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-slate-900 dark:text-white">
-              Plan Wizard Coming Soon
-            </h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              The activation plan wizard will guide you through creating a complete plan.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface StepIndicatorProps {
-  step: number;
-  label: string;
-  isActive?: boolean;
-  isComplete?: boolean;
-}
-
-function StepIndicator({
-  step,
-  label,
-  isActive = false,
-  isComplete = false,
-}: StepIndicatorProps): JSX.Element {
-  return (
-    <div className="flex flex-col items-center">
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-full ${
-          isActive
-            ? 'bg-primary-600 text-white'
-            : isComplete
-              ? 'bg-success-500 text-white'
-              : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-        }`}
+      <WizardContainer
+        currentStep={wizard.currentStep}
+        completedSteps={wizard.completedSteps}
+        canProceed={canProceed}
+        isEditing={isEditing}
+        onBack={handleBack}
+        onNext={handleNext}
+        onCancel={handleCancel}
+        onCreate={handleCreate}
+        onGoToStep={handleGoToStep}
       >
-        {isComplete ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        ) : (
-          step
-        )}
-      </div>
-      <span
-        className={`mt-2 text-xs font-medium ${
-          isActive
-            ? 'text-primary-600 dark:text-primary-400'
-            : 'text-slate-600 dark:text-slate-400'
-        }`}
-      >
-        {label}
-      </span>
+        {renderStep()}
+      </WizardContainer>
     </div>
   );
 }

@@ -216,6 +216,15 @@ export const configSetParamsSchema = z.object({
 });
 
 // ============================================
+// System Schemas
+// ============================================
+
+/** Schema for open external URL request */
+export const openExternalParamsSchema = z.object({
+  url: z.string().url('Invalid URL format'),
+});
+
+// ============================================
 // Response Schemas
 // ============================================
 
