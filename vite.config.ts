@@ -13,13 +13,13 @@ export default defineConfig({
     react(),
     electron([
       {
-        entry: 'src/main/index.ts',
+        entry: path.resolve(__dirname, 'src/main/index.ts'),
         onstart(options) {
           options.startup();
         },
         vite: {
           build: {
-            outDir: 'dist/main',
+            outDir: path.resolve(__dirname, 'dist/main'),
             rollupOptions: {
               external: ['sql.js', 'electron'],
             },
@@ -27,13 +27,13 @@ export default defineConfig({
         },
       },
       {
-        entry: 'src/preload/index.ts',
+        entry: path.resolve(__dirname, 'src/preload/index.ts'),
         onstart(options) {
           options.reload();
         },
         vite: {
           build: {
-            outDir: 'dist/preload',
+            outDir: path.resolve(__dirname, 'dist/preload'),
           },
         },
       },
