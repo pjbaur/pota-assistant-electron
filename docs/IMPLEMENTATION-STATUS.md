@@ -7,9 +7,9 @@
 
 ## Summary
 
-Phase 1 (Foundation Infrastructure) and Phase 2 (Core Features) are now **COMPLETE**. The application has full park discovery, map visualization, CSV import, and plan creation wizard functionality.
+Phase 1 (Foundation Infrastructure), Phase 2 (Core Features), and Phase 3 (Intelligence Features) are now **COMPLETE**. The application has full park discovery, map visualization, CSV import, plan creation wizard, weather forecasts, and band recommendations.
 
-**Remaining:** Phase 3 (Intelligence - weather/bands), Phase 4 (Polish - keyboard shortcuts, export), and Phase 5 (Testing).
+**Remaining:** Phase 4 (Polish - onboarding, keyboard shortcuts hook) and Phase 5 (Testing).
 
 ---
 
@@ -65,7 +65,7 @@ Phase 1 (Foundation Infrastructure) and Phase 2 (Core Features) are now **COMPLE
 | `config:get` | ✅ Implemented | Get config value(s) |
 | `config:set` | ✅ Implemented | Set config values |
 | `system:select:csv` | ✅ Implemented | File dialog for CSV selection |
-| `weather:get` | ⏳ Phase 3 | Weather service placeholder |
+| `weather:get` | ✅ Implemented | Open-Meteo API with SQLite caching |
 
 ---
 
@@ -101,22 +101,27 @@ Phase 1 (Foundation Infrastructure) and Phase 2 (Core Features) are now **COMPLE
 
 ---
 
-## Phase 3: Intelligence Features — NOT STARTED
+## Phase 3: Intelligence Features — COMPLETE
 
-| Task | Status |
-|------|--------|
-| **3.1 Weather Service** | ❌ No API client, no cache, no widget |
-| **3.2 Band Recommendations** | ❌ No service or heuristics |
-| **3.3 Plan Detail View** | ❌ Placeholder pages only |
+| Task | Status | Notes |
+|------|--------|-------|
+| **3.1 Weather Service** | ✅ Complete | Open-Meteo API client with 1-hour SQLite cache, 7-day forecast, WMO weather codes |
+| **3.2 Band Recommendations** | ✅ Complete | Heuristic-based predictions for all amateur bands (160m-6m), time-of-day/seasonal patterns |
+| **3.3 Plan Detail View** | ✅ Complete | Full plan detail page with weather widget, band panel, equipment display |
 
-### Files Needed
+### Files Implemented
 
-- `/src/main/api/weather-client.ts`
-- `/src/main/services/weather-service.ts`
-- `/src/main/services/band-service.ts`
-- `/src/main/data/repositories/weather-cache-repository.ts`
-- `/src/renderer/components/weather/weather-widget.tsx`
-- `/src/renderer/components/band/band-panel.tsx`
+- `/src/main/api/weather-client.ts` - Open-Meteo API client
+- `/src/main/services/weather-service.ts` - Weather service with caching
+- `/src/main/services/band-service.ts` - Band condition heuristics and recommendations
+- `/src/main/data/repositories/weather-cache-repository.ts` - SQLite weather cache
+- `/src/shared/types/weather.ts` - Weather types and WMO code mappings
+- `/src/shared/types/band-types.ts` - Band types and interfaces
+- `/src/renderer/components/weather/weather-widget.tsx` - Weather display widget
+- `/src/renderer/components/band/band-panel.tsx` - Band conditions panel with 24-hour timeline
+- `/src/renderer/hooks/use-weather.ts` - Weather data hook
+- `/src/renderer/hooks/use-bands.ts` - Band recommendations hook
+- `/src/renderer/pages/plan-detail.tsx` - Full plan detail view
 
 ---
 
@@ -124,20 +129,27 @@ Phase 1 (Foundation Infrastructure) and Phase 2 (Core Features) are now **COMPLE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **4.1 Settings Screen** | ❌ Placeholder | Settings page exists but no tabs implemented |
-| **4.2 Plan Export** | ❌ Not Started | No export service or templates |
+| **4.1 Settings Screen** | ✅ Complete | Settings with profile, appearance, data management, about sections (uses stacked sections rather than tabs) |
+| **4.2 Plan Export** | ⚠️ Partial | JSON/ADIF export implemented inline in handlers. PDF export not implemented. No separate export service file |
 | **4.3 Sidebar/Layout** | ✅ Complete | Sidebar, header, main-layout all implemented |
-| **4.4 Keyboard Shortcuts** | ❌ Not Started |
+| **4.4 Keyboard Shortcuts** | ⚠️ Partial | Menu shortcuts implemented (Cmd+N, Cmd+Shift+E, Cmd+B, Cmd+,). No dedicated renderer-level hook |
 | **4.5 Theme System** | ✅ Complete | Dark/light toggle working |
-| **4.6 Onboarding** | ❌ Not Started |
+| **4.6 Onboarding** | ❌ Not Started | No welcome screen or onboarding flow |
 
-### Files Needed
+### Files Implemented
 
-- `/src/main/services/export-service.ts`
-- `/src/main/services/templates/markdown-template.ts`
-- `/src/main/services/templates/text-template.ts`
-- `/src/renderer/hooks/use-keyboard-shortcuts.ts`
-- `/src/renderer/components/onboarding/welcome-screen.tsx`
+- `/src/renderer/pages/settings.tsx` - Settings page with all sections
+- `/src/renderer/components/settings/profile-section.tsx` - Callsign, grid square, location
+- `/src/renderer/components/settings/data-section.tsx` - Import/clear parks
+- `/src/main/utils/menu.ts` - Application menu with keyboard shortcuts
+
+### Files Still Needed
+
+- `/src/main/services/export-service.ts` - Dedicated export service (currently inline in handlers)
+- `/src/main/services/templates/markdown-template.ts` - Markdown export template
+- `/src/main/services/templates/text-template.ts` - Text export template
+- `/src/renderer/hooks/use-keyboard-shortcuts.ts` - Renderer-level keyboard hook
+- `/src/renderer/components/onboarding/welcome-screen.tsx` - First-run onboarding
 
 ---
 
@@ -170,16 +182,22 @@ Phase 1 (Foundation Infrastructure) and Phase 2 (Core Features) are now **COMPLE
 - **Interactive map** with dark mode, marker clustering, park selection
 - **Park discovery** with search, filters, detail panel, list/map views
 - **Plan creation wizard** with 4-step workflow
+- **Weather service** with Open-Meteo API and SQLite caching
+- **Band recommendations** with heuristic-based propagation predictions
+- **Plan detail view** with integrated weather and band information
+- **Settings page** with profile, appearance, and data management sections
+- **JSON/ADIF export** for activation plans
 
 ---
 
 ## Next Priority Work
 
-To complete Phase 3 and add intelligence features:
+To complete Phase 4 and Phase 5:
 
-1. **Implement weather service** with Open-Meteo API client and caching
-2. **Add band recommendations** based on time/season heuristics
-3. **Build plan detail view** with weather and band info
+1. **Add onboarding flow** - Welcome screen for first-time users
+2. **Implement renderer keyboard shortcuts hook** - For app-wide keyboard navigation
+3. **Create dedicated export service** - Separate from handlers with PDF support
+4. **Write comprehensive tests** - Unit tests for services, repositories, components
 
 ---
 
@@ -196,8 +214,10 @@ From the plan, these items need verification:
 - [x] Map renders in < 500ms with 60fps (Leaflet with clustering)
 - [x] Search returns results in < 100ms
 - [x] Plan creation wizard completes (4-step wizard implemented)
-- [ ] Weather fetches and caches
-- [ ] Export produces valid files
+- [x] Weather fetches and caches (Open-Meteo with SQLite cache)
+- [x] Export produces valid files (JSON/ADIF implemented)
 - [x] Theme toggles correctly
-- [ ] All keyboard shortcuts work
+- [x] Menu keyboard shortcuts work (Cmd+N, Cmd+Shift+E, Cmd+B, Cmd+,)
+- [ ] All keyboard shortcuts work (renderer-level hook missing)
 - [ ] Build produces installers for all platforms
+- [ ] Onboarding flow works
