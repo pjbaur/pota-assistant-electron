@@ -5,7 +5,12 @@
 
 import { app, BrowserWindow, session } from 'electron';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabase, closeDatabase, runMigrations } from './database';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { registerPlaceholderHandlers } from './ipc';
 import { createApplicationMenu } from './utils/menu';
 import {
@@ -78,8 +83,8 @@ function createWindow(): void {
   // Get persisted window bounds
   const boundsOptions = getWindowBoundsOptions();
 
-  // Preload script path
-  const preloadPath = path.join(__dirname, '..', 'preload', 'index.js');
+  // Preload script path (must be .cjs for CommonJS compatibility with ESM package)
+  const preloadPath = path.join(__dirname, '..', 'preload', 'index.cjs');
 
   // Create the browser window with security settings
   mainWindow = new BrowserWindow({
@@ -175,7 +180,6 @@ function loadRenderer(): void {
     // Load from built files in production
     const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
     console.log('Loading renderer from:', rendererPath);
-    console.log('__dirname:', __dirname);
     mainWindow
       .loadFile(rendererPath)
       .then(() => {

@@ -1,7 +1,12 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import initSqlJs from 'sql.js';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import type { Database, SqlJsStatic } from 'sql.js';
 
 /**
@@ -241,4 +246,41 @@ export function executeTransaction(statements: Array<{ sql: string; params?: ini
     database.exec('ROLLBACK');
     throw error;
   }
+}
+
+/**
+ * Record import metadata after a successful CSV import
+ */
+export function recordImportMetadata(filename: string, rowsImported: number): void {
+  const sql = `
+    INSERT INTO import_metadata (filename, rows_imported, imported_at)
+    VALUES (?, ?, datetime('now'))
+  `;
+  executeRun(sql, [filename, rowsImported]);
+  saveDatabase();
+}
+
+/**
+ * Get the most recent import metadata
+ */
+export function getLatestImportMetadata(): { filename: string; rows_imported: number; imported_at: string } | null {
+  const sql = `
+    SELECT filename, rows_imported, imported_at
+    FROM import_metadata
+    ORDER BY imported_at DESC
+    LIMIT 1
+  `;
+  return executeOne<{ filename: string; rows_imported: number; imported_at: string }>(sql);
+}
+
+/**
+ * Get all import metadata records
+ */
+export function getAllImportMetadata(): Array<{ id: number; filename: string; rows_imported: number; imported_at: string }> {
+  const sql = `
+    SELECT id, filename, rows_imported, imported_at
+    FROM import_metadata
+    ORDER BY imported_at DESC
+  `;
+  return executeAll<{ id: number; filename: string; rows_imported: number; imported_at: string }>(sql);
 }

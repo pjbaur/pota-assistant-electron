@@ -34,6 +34,11 @@ export default defineConfig({
         vite: {
           build: {
             outDir: path.resolve(__dirname, 'dist/preload'),
+            lib: {
+              entry: path.resolve(__dirname, 'src/preload/index.ts'),
+              formats: ['cjs'],
+              fileName: () => 'index.cjs',
+            },
           },
         },
       },
