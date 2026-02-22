@@ -24,6 +24,9 @@ export const IPC_CHANNELS = {
   // Weather
   WEATHER_GET: 'weather:get',
 
+  // Band recommendations
+  BANDS_GET_RECOMMENDATIONS: 'bands:get:recommendations',
+
   // Configuration
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',

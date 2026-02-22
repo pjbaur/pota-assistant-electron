@@ -43,6 +43,9 @@ export {
   // System schemas
   openExternalParamsSchema,
 
+  // Band recommendations schemas
+  bandRecommendationsParamsSchema,
+
   // Response schemas
   ipcErrorSchema,
   successResponseSchema,

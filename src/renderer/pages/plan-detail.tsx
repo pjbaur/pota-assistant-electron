@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button, Dialog, DialogContent, DialogTrigger, DialogClose } from '../components/ui';
+import { WeatherWidget } from '../components/weather';
+import { BandPanel } from '../components/band';
 import { usePlan, usePlans } from '../hooks/use-plans';
+import { usePark } from '../hooks/use-parks';
+import { useWeather } from '../hooks/use-weather';
+import { useBands } from '../hooks/use-bands';
 import { useUIStore } from '../stores/ui-store';
 import type { ExportFormat, PlanStatus } from '@shared/types';
 
@@ -70,13 +75,33 @@ export function PlanDetail(): JSX.Element {
   const { deletePlan } = usePlans();
   const addToast = useUIStore((state) => state.addToast);
 
+  // Fetch park details to get coordinates for weather
+  const { park, fetchPark } = usePark(plan?.parkReference ?? null);
+
+  // Weather and band recommendations
+  const { weatherData, isLoading: weatherLoading, error: weatherError } = useWeather(
+    park?.latitude ?? null,
+    park?.longitude ?? null
+  );
+  const { forecast, isLoading: bandsLoading, error: bandsError } = useBands(
+    plan ? new Date(plan.activationDate) : null
+  );
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Fetch plan on mount
   useEffect(() => {
     void fetchPlan();
   }, [fetchPlan]);
+
+  // Fetch park details when plan is loaded
+  useEffect(() => {
+    if (plan?.parkReference) {
+      void fetchPark();
+    }
+  }, [plan?.parkReference, fetchPark]);
 
   const handleDelete = async (): Promise<void> => {
     if (!plan) return;
@@ -572,6 +597,49 @@ export function PlanDetail(): JSX.Element {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* Weather Section */}
+          <section>
+            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
+              Weather Forecast
+            </h2>
+            {weatherLoading ? (
+              <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-32 rounded-lg" />
+            ) : weatherError ? (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                Weather unavailable: {weatherError}
+              </div>
+            ) : weatherData ? (
+              <WeatherWidget weatherData={weatherData} />
+            ) : (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                No weather data available. Park coordinates required.
+              </div>
+            )}
+          </section>
+
+          {/* Band Recommendations Section */}
+          <section>
+            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
+              Band Recommendations
+            </h2>
+            {bandsLoading ? (
+              <div className="animate-pulse bg-slate-200 dark:bg-slate-700 h-32 rounded-lg" />
+            ) : bandsError ? (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                Band recommendations unavailable: {bandsError}
+              </div>
+            ) : forecast ? (
+              <BandPanel
+                recommendations={forecast}
+                plannedBands={plan.bands}
+              />
+            ) : (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                No band data available.
+              </div>
+            )}
           </section>
 
           {/* Equipment Section */}

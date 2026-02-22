@@ -25,6 +25,7 @@ import {
   configGetParamsSchema,
   configSetParamsSchema,
   openExternalParamsSchema,
+  bandRecommendationsParamsSchema,
 } from '../shared/ipc';
 import type {
   IpcChannel,
@@ -54,6 +55,8 @@ const requestSchemaMap = {
   [IPC_CHANNELS.PLANS_EXPORT]: planExportParamsSchema,
 
   [IPC_CHANNELS.WEATHER_GET]: weatherRequestParamsSchema,
+
+  [IPC_CHANNELS.BANDS_GET_RECOMMENDATIONS]: bandRecommendationsParamsSchema,
 
   [IPC_CHANNELS.CONFIG_GET]: configGetParamsSchema,
   [IPC_CHANNELS.CONFIG_SET]: configSetParamsSchema,

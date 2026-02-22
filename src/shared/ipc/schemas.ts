@@ -225,6 +225,15 @@ export const openExternalParamsSchema = z.object({
 });
 
 // ============================================
+// Band Recommendations Schemas
+// ============================================
+
+/** Schema for band recommendations request */
+export const bandRecommendationsParamsSchema = z.object({
+  date: isoDateStringSchema,
+});
+
+// ============================================
 // Response Schemas
 // ============================================
 

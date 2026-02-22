@@ -23,6 +23,7 @@ import type {
   WeatherRequestParams,
 } from './weather';
 import type { UserConfig, ConfigUpdate, ConfigKey } from './config';
+import type { DayBandForecast } from './band-types';
 
 /** IPC response wrapper for handling success/error states */
 export interface IpcResponse<T> {
@@ -81,6 +82,9 @@ export interface IpcRequestMap {
   // Weather
   'weather:get': WeatherRequestParams;
 
+  // Band recommendations
+  'bands:get:recommendations': { date: string };
+
   // Configuration
   'config:get': { key?: ConfigKey };
   'config:set': { updates: ConfigUpdate };
@@ -116,6 +120,9 @@ export interface IpcResponseMap {
 
   // Weather
   'weather:get': WeatherData | null;
+
+  // Band recommendations
+  'bands:get:recommendations': DayBandForecast;
 
   // Configuration
   'config:get': UserConfig | UserConfig[ConfigKey];

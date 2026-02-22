@@ -14,6 +14,8 @@ import * as parkRepo from '../data/repositories/park-repository';
 import * as planRepo from '../data/repositories/plan-repository';
 import * as configRepo from '../data/repositories/config-repository';
 import * as csvImportService from '../services/csv-import-service';
+import * as bandService from '../services/band-service';
+import { recordImportMetadata } from '../database/connection';
 import type { ParkSearchParams, CsvImportStatus } from '../../shared/types/park';
 import type { PlanInput, PlanListParams } from '../../shared/types/plan';
 import type { ConfigUpdate } from '../../shared/types/config';
@@ -428,17 +430,73 @@ const systemOpenExternalHandler: IpcHandlerFn = async (params): Promise<IpcRespo
 };
 
 // ============================================
-// Weather Handler (Phase 3 - placeholder)
+// Weather Handler
+// ============================================
+
+import * as weatherService from '../services/weather-service';
+import type { WeatherRequestParams } from '../../shared/types/weather';
+
+/**
+ * Handler for weather requests
+ */
+const weatherGetHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unknown>> => {
+  const { latitude, longitude } = params as { latitude: number; longitude: number };
+
+  // Validate coordinates
+  if (
+    typeof latitude !== 'number' ||
+    typeof longitude !== 'number' ||
+    Number.isNaN(latitude) ||
+    Number.isNaN(longitude)
+  ) {
+    return error('Invalid coordinates provided', 'VALIDATION_ERROR');
+  }
+
+  // Validate coordinate ranges
+  if (latitude < -90 || latitude > 90) {
+    return error('Latitude must be between -90 and 90', 'VALIDATION_ERROR');
+  }
+
+  if (longitude < -180 || longitude > 180) {
+    return error('Longitude must be between -180 and 180', 'VALIDATION_ERROR');
+  }
+
+  const requestParams: WeatherRequestParams = {
+    latitude,
+    longitude,
+    hourlyCount: 48,
+    dailyCount: 7,
+  };
+
+  const weatherData = await weatherService.getWeather(requestParams);
+
+  if (weatherData === null) {
+    return error('Failed to fetch weather data', 'INTERNAL_ERROR');
+  }
+
+  return success(weatherData);
+};
+
+// ============================================
+// Band Recommendations Handler
 // ============================================
 
 /**
- * Handler for weather requests - Phase 3 implementation needed
+ * Handler for band recommendations
  */
-const weatherGetHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
-  return error(
-    'Weather service not yet implemented. This is a Phase 3 feature.',
-    'INTERNAL_ERROR'
-  );
+const bandsGetRecommendationsHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+  const { date } = params as { date: string };
+
+  // Parse the date
+  const parsedDate = new Date(date);
+
+  // Validate the date
+  if (Number.isNaN(parsedDate.getTime())) {
+    return error('Invalid date format provided', 'VALIDATION_ERROR');
+  }
+
+  const forecast = bandService.getBandRecommendations(parsedDate);
+  return success(forecast);
 };
 
 // ============================================
@@ -526,6 +584,10 @@ const csvImportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unkno
     );
 
     console.log('[CSV Import] Result:', JSON.stringify(result, null, 2));
+
+    // Record import metadata
+    const filename = filePath.split(/[/\\]/).pop() ?? filePath;
+    recordImportMetadata(filename, result.imported);
 
     // Update completed status
     currentImportStatus = {
@@ -638,6 +700,12 @@ export function registerAppHandlers(): void {
     {
       channel: IPC_CHANNELS.WEATHER_GET,
       handler: weatherGetHandler,
+    },
+
+    // Band recommendations
+    {
+      channel: IPC_CHANNELS.BANDS_GET_RECOMMENDATIONS,
+      handler: bandsGetRecommendationsHandler,
     },
 
     // Configuration

@@ -66,3 +66,10 @@ export type {
 } from './ipc';
 
 export { success, error } from './ipc';
+
+export type {
+  BandCondition,
+  BandRecommendation,
+  HourlyBandCondition,
+  DayBandForecast,
+} from './band-types';
