@@ -60,8 +60,10 @@ function getProgramName(programId: string): string {
 export function ParkInfoCard({ park }: ParkInfoCardProps): JSX.Element {
   const navigate = useNavigate();
   const { invoke } = useIPC();
-  const { toggleFavorite: toggleFavoriteInStore } = useParkStore();
+  const { toggleFavorite: toggleFavoriteInStore, favorites } = useParkStore();
   const { addToast } = useUIStore();
+
+  const isFavorite = favorites.includes(park.reference);
 
   const handleCopyReference = useCallback(() => {
     void (async () => {
@@ -150,23 +152,23 @@ export function ParkInfoCard({ park }: ParkInfoCardProps): JSX.Element {
             </Tooltip>
           </div>
         </div>
-        <Tooltip content={park.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+        <Tooltip content={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
           <button
             onClick={handleToggleFavorite}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-yellow-500 dark:hover:bg-slate-700"
-            aria-label={park.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
               height="24"
               viewBox="0 0 24 24"
-              fill={park.isFavorite ? 'currentColor' : 'none'}
+              fill={isFavorite ? 'currentColor' : 'none'}
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={park.isFavorite ? 'text-yellow-500' : ''}
+              className={isFavorite ? 'text-yellow-500' : ''}
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
@@ -184,7 +186,7 @@ export function ParkInfoCard({ park }: ParkInfoCardProps): JSX.Element {
             {park.activationCount} {park.activationCount === 1 ? 'activation' : 'activations'}
           </span>
         )}
-        {park.isFavorite && (
+        {isFavorite && (
           <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
             Favorite
           </span>

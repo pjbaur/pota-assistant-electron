@@ -10,7 +10,7 @@ export interface StepParkProps {
 
 export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
-  const { parks, isLoading, error, searchParks } = useParks();
+  const { parks, favorites, isLoading, error, searchParks } = useParks();
 
   useEffect(() => {
     // Debounce search
@@ -101,7 +101,7 @@ export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Ele
                       {park.reference} - {park.entityId}
                     </div>
                   </div>
-                  {park.isFavorite && (
+                  {favorites.includes(park.reference) && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
