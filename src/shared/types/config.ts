@@ -37,6 +37,8 @@ export interface UserConfig {
   equipmentPresets: EquipmentPreset[];
   /** Last CSV import path */
   lastCsvPath?: string;
+  /** Whether user has completed the onboarding flow */
+  hasCompletedOnboarding?: boolean;
   /** Window bounds for persistence */
   windowBounds?: {
     x: number;

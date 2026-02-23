@@ -105,13 +105,6 @@ const CONDITION_RANK: Record<BandCondition, number> = {
 };
 
 /**
- * Get the better of two conditions
- */
-function betterCondition(a: BandCondition, b: BandCondition): BandCondition {
-  return CONDITION_RANK[a] >= CONDITION_RANK[b] ? a : b;
-}
-
-/**
  * Apply seasonal adjustment to a base condition
  */
 function applySeasonalAdjustment(

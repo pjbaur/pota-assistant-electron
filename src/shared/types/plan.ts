@@ -119,7 +119,7 @@ export interface PlanListResult {
 export type PlanStatus = 'draft' | 'finalized' | 'completed' | 'cancelled';
 
 /** Export format options */
-export type ExportFormat = 'json' | 'adif' | 'pdf';
+export type ExportFormat = 'json' | 'markdown' | 'text' | 'adif' | 'pdf';
 
 /** Result of plan export */
 export interface PlanExportResult {

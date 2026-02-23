@@ -23,6 +23,7 @@ export function useParks(options: UseParksOptions = {}): {
   toggleFavorite: (parkId: string) => void;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
+  clearFilters: () => void;
 } {
   const { autoFetch = false, initialFilters } = options;
 
@@ -44,6 +45,7 @@ export function useParks(options: UseParksOptions = {}): {
     setError,
     setTotalResults,
     setCurrentPage,
+    clearFilters: clearFiltersFromStore,
   } = useParkStore();
 
   const { invoke } = useIPC();
@@ -122,6 +124,11 @@ export function useParks(options: UseParksOptions = {}): {
     [toggleFavoriteInStore]
   );
 
+  const clearFilters = useCallback((): void => {
+    clearFiltersFromStore();
+    void searchParks({});
+  }, [clearFiltersFromStore, searchParks]);
+
   useEffect(() => {
     if (autoFetch) {
       if (initialFilters) {
@@ -147,6 +154,7 @@ export function useParks(options: UseParksOptions = {}): {
     toggleFavorite,
     loadMore,
     refresh,
+    clearFilters,
   };
 }
 

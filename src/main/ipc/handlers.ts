@@ -15,6 +15,7 @@ import * as planRepo from '../data/repositories/plan-repository';
 import * as configRepo from '../data/repositories/config-repository';
 import * as csvImportService from '../services/csv-import-service';
 import * as bandService from '../services/band-service';
+import * as exportService from '../services/export-service';
 import { recordImportMetadata } from '../database/connection';
 import type { ParkSearchParams, CsvImportStatus } from '../../shared/types/park';
 import type { PlanInput, PlanListParams } from '../../shared/types/plan';
@@ -330,32 +331,18 @@ const planExportHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
     return error('Plan not found', 'NOT_FOUND');
   }
 
-  // Generate export content based on format
-  let content: string;
-  let filename: string;
-
-  switch (format) {
-    case 'json':
-      content = JSON.stringify(plan, null, 2);
-      filename = `activation-plan-${plan.id}.json`;
-      break;
-    case 'adif':
-      // ADIF format would be more complex in real implementation
-      content = `<ADIF_VER:5>3.1.0\n<EOH>\n<PARK_REF:${plan.parkReference.length}>${plan.parkReference}\n`;
-      filename = `activation-plan-${plan.id}.adi`;
-      break;
-    case 'pdf':
-      // PDF generation would require additional libraries
-      return error('PDF export not yet implemented', 'INTERNAL_ERROR');
-    default:
-      return error(`Unsupported export format: ${format}`, 'VALIDATION_ERROR');
+  // Validate format
+  if (!exportService.isFormatSupported(format)) {
+    return error(`Unsupported export format: ${format}`, 'VALIDATION_ERROR');
   }
 
-  return success({
-    content,
-    format,
-    filename,
-  });
+  try {
+    const result = exportService.exportPlan(plan, format);
+    return success(result);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return error(`Export failed: ${errorMessage}`, 'INTERNAL_ERROR');
+  }
 };
 
 // ============================================

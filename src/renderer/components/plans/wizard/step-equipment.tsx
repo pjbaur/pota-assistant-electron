@@ -1,6 +1,36 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useEquipmentPresets } from '../../../hooks/use-plans';
+import { useCallback } from 'react';
 import type { EquipmentPreset } from '@shared/types';
+
+// Hardcoded equipment presets as specified
+const PRESETS: EquipmentPreset[] = [
+  {
+    id: 'qrp-portable',
+    name: 'QRP Portable (≤5W)',
+    radio: 'Portable QRP Radio',
+    antenna: 'Wire Antenna',
+    powerWatts: 5,
+    mode: 'SSB/CW',
+    notes: 'Lightweight field operation',
+  },
+  {
+    id: 'standard-portable',
+    name: 'Standard Portable (20-30W)',
+    radio: 'Portable Radio',
+    antenna: 'Vertical/Dipole',
+    powerWatts: 25,
+    mode: 'SSB',
+    notes: 'Balanced power and portability',
+  },
+  {
+    id: 'mobile-high',
+    name: 'Mobile/High Power (≥50W)',
+    radio: 'Mobile Radio',
+    antenna: 'Mobile Antenna',
+    powerWatts: 50,
+    mode: 'SSB',
+    notes: 'Maximum power from vehicle',
+  },
+];
 
 export interface StepEquipmentProps {
   selectedPreset: EquipmentPreset | null;
@@ -8,32 +38,12 @@ export interface StepEquipmentProps {
 }
 
 export function StepEquipment({ selectedPreset, onPresetSelect }: StepEquipmentProps): JSX.Element {
-  const { presets, fetchPresets } = useEquipmentPresets();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadPresets = async () => {
-      setIsLoading(true);
-      await fetchPresets();
-      setIsLoading(false);
-    };
-    void loadPresets();
-  }, [fetchPresets]);
-
   const handlePresetClick = useCallback(
     (preset: EquipmentPreset) => {
       onPresetSelect(preset);
     },
     [onPresetSelect]
   );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -44,39 +54,8 @@ export function StepEquipment({ selectedPreset, onPresetSelect }: StepEquipmentP
         </p>
       </div>
 
-      {presets.length === 0 ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mx-auto text-slate-400"
-          >
-            <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
-            <rect x="9" y="9" width="6" height="6" />
-            <line x1="9" y1="1" x2="9" y2="4" />
-            <line x1="15" y1="1" x2="15" y2="4" />
-            <line x1="9" y1="20" x2="9" y2="23" />
-            <line x1="15" y1="20" x2="15" y2="23" />
-            <line x1="20" y1="9" x2="23" y2="9" />
-            <line x1="20" y1="14" x2="23" y2="14" />
-            <line x1="1" y1="9" x2="4" y2="9" />
-            <line x1="1" y1="14" x2="4" y2="14" />
-          </svg>
-          <h3 className="mt-4 font-medium text-slate-900 dark:text-white">No Equipment Presets</h3>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            You can create equipment presets in Settings to use them here.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {presets.map((preset) => (
+      <div className="space-y-3">
+        {PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
@@ -123,7 +102,6 @@ export function StepEquipment({ selectedPreset, onPresetSelect }: StepEquipmentP
             </button>
           ))}
         </div>
-      )}
 
       {selectedPreset && (
         <div className="rounded-lg border border-success-200 bg-success-50 p-4 dark:border-success-800 dark:bg-success-900/20">
