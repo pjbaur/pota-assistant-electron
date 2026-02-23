@@ -68,8 +68,8 @@ export function ProfileSection(): JSX.Element {
         const config = result.data as UserConfig;
         setCallsign(config.callsign ?? '');
         setGridSquare(config.homeGridSquare ?? '');
-        // Note: lat/lon would come from config if available
-        // For now, leaving empty as they're not in UserConfig type yet
+        setLatitude(config.defaultLatitude?.toString() ?? '');
+        setLongitude(config.defaultLongitude?.toString() ?? '');
       }
 
       setIsLoading(false);
@@ -154,10 +154,16 @@ export function ProfileSection(): JSX.Element {
 
     setIsSaving(true);
 
-    const updates: Record<string, string | undefined> = {
+    const updates: {
+      callsign?: string;
+      homeGridSquare?: string;
+      defaultLatitude?: number;
+      defaultLongitude?: number;
+    } = {
       callsign: callsign || undefined,
       homeGridSquare: gridSquare || undefined,
-      // Note: latitude/longitude would be saved here if added to config
+      defaultLatitude: latitude ? parseFloat(latitude) : undefined,
+      defaultLongitude: longitude ? parseFloat(longitude) : undefined,
     };
 
     const result = await invoke('config:set', { updates });

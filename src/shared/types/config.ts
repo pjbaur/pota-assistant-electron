@@ -19,6 +19,10 @@ export interface UserConfig {
   callsign?: string;
   /** Home grid square */
   homeGridSquare?: string;
+  /** Default latitude for weather and distance calculations */
+  defaultLatitude?: number;
+  /** Default longitude for weather and distance calculations */
+  defaultLongitude?: number;
   /** UI theme preference */
   theme: ThemePreference;
   /** Distance unit for display */
