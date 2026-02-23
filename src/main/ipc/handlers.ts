@@ -323,7 +323,7 @@ const planDeleteHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
 /**
  * Handler for exporting a plan
  */
-const planExportHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
+const planExportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unknown>> => {
   const { id, format } = params as { id: string; format: string };
   const plan = planRepo.getPlanById(id);
 
@@ -337,7 +337,7 @@ const planExportHandler: IpcHandlerFn = (params): IpcResponse<unknown> => {
   }
 
   try {
-    const result = exportService.exportPlan(plan, format);
+    const result = await exportService.exportPlanAsync(plan, format);
     return success(result);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';

@@ -138,9 +138,10 @@ function parseConfigValue<K extends ConfigKey>(
         return (value || undefined) as UserConfig[K];
 
       case 'defaultLatitude':
-      case 'defaultLongitude':
+      case 'defaultLongitude': {
         const numValue = parseFloat(value);
         return (isNaN(numValue) ? undefined : numValue) as UserConfig[K];
+      }
 
       case 'equipmentPresets':
         if (value === '' || value === '[]') {

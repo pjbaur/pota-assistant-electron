@@ -6,7 +6,10 @@
  */
 
 import type { Plan, ExportFormat, PlanExportResult } from '../../shared/types/plan';
-import { generateMarkdown, generateText } from './templates/index.js';
+import { generateMarkdown, generateText, generatePdfDefinition } from './templates/index.js';
+// pdfmake's TypeScript types don't properly export the server-side Printer class
+// Using dynamic import to work around this
+import PdfPrinter from 'pdfmake/Printer';
 
 /** Supported export formats */
 export const SUPPORTED_FORMATS: readonly ExportFormat[] = [
@@ -18,7 +21,8 @@ export const SUPPORTED_FORMATS: readonly ExportFormat[] = [
 ] as const;
 
 /**
- * Export a plan to the specified format
+ * Export a plan to the specified format (synchronous)
+ * Note: PDF export requires async - use exportPlanAsync for PDF
  */
 export function exportPlan(plan: Plan, format: ExportFormat): PlanExportResult {
   // Validate format
@@ -37,10 +41,29 @@ export function exportPlan(plan: Plan, format: ExportFormat): PlanExportResult {
     case 'adif':
       return exportAsAdif(plan);
     case 'pdf':
-      throw new Error('PDF export not yet implemented');
+      throw new Error('PDF export requires async - use exportPlanAsync');
     default:
       throw new Error(`Unsupported export format: ${format}`);
   }
+}
+
+/**
+ * Export a plan to the specified format (async)
+ * Required for PDF format, can be used for any format
+ */
+export async function exportPlanAsync(plan: Plan, format: ExportFormat): Promise<PlanExportResult> {
+  // Validate format
+  if (!SUPPORTED_FORMATS.includes(format)) {
+    throw new Error(`Unsupported export format: ${format}`);
+  }
+
+  // PDF requires async handling
+  if (format === 'pdf') {
+    return exportAsPdfAsync(plan);
+  }
+
+  // Other formats can use sync version
+  return exportPlan(plan, format);
 }
 
 /**
@@ -147,6 +170,46 @@ function exportAsAdif(plan: Plan): PlanExportResult {
     format: 'adif',
     filename: generateFilename(plan, 'adi'),
   };
+}
+
+/**
+ * Export plan as PDF (async)
+ *
+ * Uses pdfmake to generate a PDF document with plan details.
+ */
+async function exportAsPdfAsync(plan: Plan): Promise<PlanExportResult> {
+  // Define fonts - using standard Helvetica fonts (bundled with PDF)
+  const fonts = {
+    Roboto: {
+      normal: 'Helvetica',
+      bold: 'Helvetica-Bold',
+    },
+  };
+
+  const printer = new PdfPrinter(fonts);
+  const docDefinition = generatePdfDefinition(plan);
+
+  // Create PDF document using getBuffer for async operation
+  const pdfDoc = printer.createPdfKitDocument(docDefinition);
+
+  // Collect PDF data into buffer using promises
+  const chunks: Buffer[] = [];
+
+  return new Promise((resolve, reject) => {
+    pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    pdfDoc.on('end', () => {
+      const buffer = Buffer.concat(chunks);
+      resolve({
+        content: buffer.toString('base64'),
+        format: 'pdf',
+        filename: generateFilename(plan, 'pdf'),
+      });
+    });
+    pdfDoc.on('error', (err: Error) => {
+      reject(new Error(`PDF generation failed: ${err.message}`));
+    });
+    pdfDoc.end();
+  });
 }
 
 /**

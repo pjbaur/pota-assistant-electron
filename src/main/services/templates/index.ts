@@ -6,3 +6,4 @@
 
 export { generateMarkdown } from './markdown-template.js';
 export { generateText } from './text-template.js';
+export { generatePdfDefinition } from './pdf-template.js';
