@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MapContainerComponent } from '../components/map';
 import { ParkCard, ParkDetail, ParkSearch } from '../components/park';
-import { useParks } from '../hooks/use-parks';
+import { useParks, usePark } from '../hooks/use-parks';
 import type { Park } from '@shared/types';
 
 type ViewMode = 'list' | 'map';
@@ -12,15 +12,38 @@ export function Parks(): JSX.Element {
 
   const {
     parks,
-    selectedPark,
+    selectedPark: selectedParkFromSearch,
     filters,
     isLoading,
     error,
     totalResults,
     searchParks,
-    selectPark,
+    selectPark: selectParkFromSearch,
     clearFilters,
   } = useParks({ autoFetch: true });
+
+  // Fetch full park details (including timezone) when a park is selected
+  const {
+    park: selectedParkWithDetails,
+    fetchPark,
+  } = usePark(selectedParkFromSearch?.reference ?? null);
+
+  // Fetch full details when park selection changes
+  useEffect(() => {
+    if (selectedParkFromSearch?.reference) {
+      void fetchPark();
+    }
+  }, [selectedParkFromSearch?.reference, fetchPark]);
+
+  // Use the full details if available, otherwise fall back to search result
+  const selectedPark = selectedParkWithDetails ?? selectedParkFromSearch;
+
+  const selectPark = useCallback(
+    (park: Park | null) => {
+      selectParkFromSearch(park);
+    },
+    [selectParkFromSearch]
+  );
 
   const handleSearch = useCallback(
     (newFilters: Partial<typeof filters>) => {
