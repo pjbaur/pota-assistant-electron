@@ -2,14 +2,11 @@
  * Export Service
  *
  * Provides functionality to export activation plans in various formats
- * including JSON, Markdown, Plain Text, and ADIF.
+ * including JSON, Markdown, Plain Text, ADIF, and PDF.
  */
 
 import type { Plan, ExportFormat, PlanExportResult } from '../../shared/types/plan';
-import { generateMarkdown, generateText, generatePdfDefinition } from './templates/index.js';
-// pdfmake's TypeScript types don't properly export the server-side Printer class
-// Using dynamic import to work around this
-import PdfPrinter from 'pdfmake/Printer';
+import { generateMarkdown, generateText, generatePdfDocument } from './templates/index.js';
 
 /** Supported export formats */
 export const SUPPORTED_FORMATS: readonly ExportFormat[] = [
@@ -175,41 +172,17 @@ function exportAsAdif(plan: Plan): PlanExportResult {
 /**
  * Export plan as PDF (async)
  *
- * Uses pdfmake to generate a PDF document with plan details.
+ * Uses pdf-lib to generate a PDF document with plan details.
  */
 async function exportAsPdfAsync(plan: Plan): Promise<PlanExportResult> {
-  // Define fonts - using standard Helvetica fonts (bundled with PDF)
-  const fonts = {
-    Roboto: {
-      normal: 'Helvetica',
-      bold: 'Helvetica-Bold',
-    },
+  const pdfBytes = await generatePdfDocument(plan);
+  const buffer = Buffer.from(pdfBytes);
+
+  return {
+    content: buffer.toString('base64'),
+    format: 'pdf',
+    filename: generateFilename(plan, 'pdf'),
   };
-
-  const printer = new PdfPrinter(fonts);
-  const docDefinition = generatePdfDefinition(plan);
-
-  // Create PDF document using getBuffer for async operation
-  const pdfDoc = printer.createPdfKitDocument(docDefinition);
-
-  // Collect PDF data into buffer using promises
-  const chunks: Buffer[] = [];
-
-  return new Promise((resolve, reject) => {
-    pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-    pdfDoc.on('end', () => {
-      const buffer = Buffer.concat(chunks);
-      resolve({
-        content: buffer.toString('base64'),
-        format: 'pdf',
-        filename: generateFilename(plan, 'pdf'),
-      });
-    });
-    pdfDoc.on('error', (err: Error) => {
-      reject(new Error(`PDF generation failed: ${err.message}`));
-    });
-    pdfDoc.end();
-  });
 }
 
 /**

@@ -1,170 +1,203 @@
 /**
  * PDF Export Template
  *
- * Generates PDF output for activation plans using pdfmake.
+ * Generates PDF output for activation plans using pdf-lib.
  */
 
-import type { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import type { PDFFont } from 'pdf-lib';
 import type { Plan } from '../../../shared/types/plan';
 
+const MARGIN = 50;
+const PAGE_WIDTH = 612; // Letter size
+const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+
 /**
- * Generate a PDF document definition for a plan
+ * Generate a PDF document for a plan
  */
-export function generatePdfDefinition(plan: Plan): TDocumentDefinitions {
-  const content: Content[] = [];
+export async function generatePdfDocument(plan: Plan): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
 
-  // Title
-  content.push({
-    text: plan.name,
-    style: 'header',
-    alignment: 'center',
+  // Embed fonts
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, 792]); // Letter size
+  let y = page.getHeight() - MARGIN;
+
+  /**
+   * Draw text and update y position
+   */
+  const drawText = (text: string, options: {
+    font?: PDFFont;
+    size?: number;
+    color?: { r: number; g: number; b: number };
+    indent?: number;
+  } = {}): void => {
+    const { font = helvetica, size = 11, color = { r: 0, g: 0, b: 0 }, indent = 0 } = options;
+    page.drawText(text, {
+      x: MARGIN + indent,
+      y,
+      font,
+      size,
+      color: rgb(color.r, color.g, color.b),
+    });
+    y -= size + 4;
+  };
+
+  /**
+   * Draw a horizontal line
+   */
+  const drawLine = (): void => {
+    page.drawLine({
+      start: { x: MARGIN, y: y + 4 },
+      end: { x: PAGE_WIDTH - MARGIN, y: y + 4 },
+      thickness: 0.5,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+    y -= 10;
+  };
+
+  /**
+   * Check if we need a new page
+   */
+  const checkPageBreak = (neededSpace: number): void => {
+    if (y - neededSpace < MARGIN) {
+      page = pdfDoc.addPage([PAGE_WIDTH, 792]);
+      y = page.getHeight() - MARGIN;
+    }
+  };
+
+  // Title - centered
+  const title = plan.name;
+  const titleWidth = helveticaBold.widthOfTextAtSize(title, 18);
+  page.drawText(title, {
+    x: (PAGE_WIDTH - titleWidth) / 2,
+    y,
+    font: helveticaBold,
+    size: 18,
   });
-
-  content.push({ text: '', margin: [0, 10] }); // Spacer
+  y -= 30;
 
   // Plan Details section
-  content.push({
-    text: 'Plan Details',
-    style: 'subheader',
-  });
+  drawText('Plan Details', { font: helveticaBold, size: 14 });
+  drawLine();
 
-  const detailsTable: Content = {
-    table: {
-      widths: ['auto', '*'],
-      body: [
-        ['Park Reference:', plan.parkReference],
-        ['Activation Date:', plan.activationDate],
-        ['Time:', `${plan.startTime} - ${plan.endTime}`],
-        ['Status:', formatStatus(plan.status)],
-        ...(plan.operatorCallsign ? [['Operator:', plan.operatorCallsign]] : []),
-      ],
-    },
-    layout: 'noBorders',
-    margin: [0, 5, 0, 15],
-  };
-  content.push(detailsTable);
+  const details = [
+    ['Park Reference:', plan.parkReference],
+    ['Activation Date:', plan.activationDate],
+    ['Time:', `${plan.startTime} - ${plan.endTime}`],
+    ['Status:', formatStatus(plan.status)],
+    ...(plan.operatorCallsign ? [['Operator:', plan.operatorCallsign]] : []),
+  ];
+
+  for (const [label, value] of details) {
+    drawText(label, { font: helveticaBold, size: 11 });
+    drawText(value, { indent: 120 });
+    y -= 4;
+  }
+
+  y -= 10;
 
   // Equipment section
   if (plan.equipmentPreset) {
-    content.push({
-      text: 'Equipment',
-      style: 'subheader',
-    });
+    checkPageBreak(120);
+    drawText('Equipment', { font: helveticaBold, size: 14 });
+    drawLine();
 
-    const equipmentTable: Content = {
-      table: {
-        widths: ['auto', '*'],
-        body: [
-          ['Preset Name:', plan.equipmentPreset.name],
-          ['Radio:', plan.equipmentPreset.radio],
-          ['Antenna:', plan.equipmentPreset.antenna],
-          ['Power:', `${plan.equipmentPreset.powerWatts}W`],
-          ['Mode:', plan.equipmentPreset.mode],
-          ...(plan.equipmentPreset.notes ? [['Notes:', plan.equipmentPreset.notes]] : []),
-        ],
-      },
-      layout: 'noBorders',
-      margin: [0, 5, 0, 15],
-    };
-    content.push(equipmentTable);
+    const equipment = plan.equipmentPreset;
+    const equipDetails = [
+      ['Preset:', equipment.name],
+      ['Radio:', equipment.radio],
+      ['Antenna:', equipment.antenna],
+      ['Power:', `${equipment.powerWatts}W`],
+      ['Mode:', equipment.mode],
+      ...(equipment.notes ? [['Notes:', equipment.notes]] : []),
+    ];
+
+    for (const [label, value] of equipDetails) {
+      drawText(label, { font: helveticaBold, size: 11 });
+      drawText(value, { indent: 120 });
+      y -= 4;
+    }
+
+    y -= 10;
   }
 
   // Bands section
   if (plan.bands.length > 0) {
-    content.push({
-      text: 'Planned Bands',
-      style: 'subheader',
-    });
-
-    content.push({
-      text: plan.bands.join(', '),
-      margin: [0, 5, 0, 15],
-    });
+    checkPageBreak(60);
+    drawText('Planned Bands', { font: helveticaBold, size: 14 });
+    drawLine();
+    drawText(plan.bands.join(', '));
+    y -= 10;
   }
 
   // Time Slots section
   if (plan.timeSlots.length > 0) {
-    content.push({
-      text: 'Time Slots',
-      style: 'subheader',
-    });
+    checkPageBreak(80 + (plan.timeSlots.length * 20));
+    drawText('Time Slots', { font: helveticaBold, size: 14 });
+    drawLine();
 
-    const timeSlotBody: string[][] = [
-      ['Time', 'Band', 'Mode', 'Frequency', 'Notes'],
-      ...plan.timeSlots.map(slot => [
-        `${slot.startTime} - ${slot.endTime}`,
-        slot.band,
-        slot.mode,
-        slot.frequency ? `${slot.frequency} MHz` : '-',
-        slot.notes || '-',
-      ]),
-    ];
+    for (const slot of plan.timeSlots) {
+      const freq = slot.frequency ? `${slot.frequency} MHz` : '-';
+      const notes = slot.notes || '';
+      drawText(`${slot.startTime} - ${slot.endTime}`, { font: helveticaBold, size: 10 });
+      drawText(`${slot.band} | ${slot.mode} | ${freq}${notes ? ` | ${notes}` : ''}`, { size: 10, indent: 100 });
+      y -= 6;
+    }
 
-    const timeSlotsTable: Content = {
-      table: {
-        headerRows: 1,
-        widths: ['auto', 'auto', 'auto', 'auto', '*'],
-        body: timeSlotBody,
-      },
-      layout: 'lightHorizontalLines',
-      margin: [0, 5, 0, 15],
-    };
-    content.push(timeSlotsTable);
+    y -= 10;
   }
 
   // Notes section
   if (plan.notes) {
-    content.push({
-      text: 'Notes',
-      style: 'subheader',
-    });
+    checkPageBreak(80);
+    drawText('Notes', { font: helveticaBold, size: 14 });
+    drawLine();
 
-    content.push({
-      text: plan.notes,
-      margin: [0, 5, 0, 15],
-    });
+    // Word wrap notes
+    const words = plan.notes.split(' ');
+    let line = '';
+    const maxWidth = CONTENT_WIDTH - 10;
+
+    for (const word of words) {
+      const testLine = line ? `${line} ${word}` : word;
+      if (helvetica.widthOfTextAtSize(testLine, 11) > maxWidth) {
+        drawText(line);
+        line = word;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) {
+      drawText(line);
+    }
+
+    y -= 10;
   }
 
   // Footer
-  content.push({ text: '', margin: [0, 20] }); // Spacer
-  content.push({
-    text: 'Generated by POTA Activation Planner',
-    style: 'footer',
-    alignment: 'center',
+  y -= 20;
+  drawLine();
+  const footerColor = { r: 0.4, g: 0.4, b: 0.4 };
+  drawText('Generated by POTA Activation Planner', {
+    font: helvetica,
+    size: 9,
+    color: footerColor
   });
-  content.push({
-    text: `Created: ${formatDate(plan.createdAt)}`,
-    style: 'footer',
-    alignment: 'center',
+  drawText(`Created: ${formatDate(plan.createdAt)}`, {
+    font: helvetica,
+    size: 9,
+    color: footerColor
   });
-  content.push({
-    text: `Last Modified: ${formatDate(plan.updatedAt)}`,
-    style: 'footer',
-    alignment: 'center',
+  drawText(`Last Modified: ${formatDate(plan.updatedAt)}`, {
+    font: helvetica,
+    size: 9,
+    color: footerColor
   });
 
-  return {
-    content,
-    styles: {
-      header: {
-        fontSize: 18,
-        bold: true,
-        margin: [0, 0, 0, 10] as [number, number, number, number],
-      },
-      subheader: {
-        fontSize: 14,
-        bold: true,
-        margin: [0, 10, 0, 5] as [number, number, number, number],
-      },
-      footer: {
-        fontSize: 9,
-        color: '#666666',
-      },
-    },
-    defaultStyle: {
-      fontSize: 11,
-    },
-  };
+  return pdfDoc.save();
 }
 
 /**
