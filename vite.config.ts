@@ -21,7 +21,7 @@ export default defineConfig({
           build: {
             outDir: path.resolve(__dirname, 'dist/main'),
             rollupOptions: {
-              external: ['sql.js', 'electron'],
+              external: ['sql.js', 'electron', 'geo-tz'],
             },
           },
         },
