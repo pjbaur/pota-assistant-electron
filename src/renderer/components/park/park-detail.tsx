@@ -6,6 +6,27 @@ import { useParkStore } from '../../stores/park-store';
 import { useUIStore } from '../../stores/ui-store';
 import type { Park } from '@shared/types';
 
+/**
+ * Format timezone for display
+ */
+function formatTimezone(timezone: string): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(new Date());
+    const tzNamePart = parts.find((p) => p.type === 'timeZoneName');
+    const abbreviation = tzNamePart?.value ?? '';
+
+    // Get city name from IANA identifier
+    const cityPart = timezone.split('/').pop()?.replace(/_/g, ' ') ?? '';
+    return `${cityPart} (${abbreviation})`;
+  } catch {
+    return timezone;
+  }
+}
+
 export interface ParkDetailProps {
   park: Park;
   onClose?: () => void;
@@ -300,6 +321,31 @@ export function ParkDetail({ park, onClose }: ParkDetailProps): JSX.Element {
               {park.entityId}
             </div>
           </div>
+
+          {park.timezone && (
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+              <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                Timezone
+              </div>
+              <div className="text-sm text-slate-900 dark:text-white">
+                {formatTimezone(park.timezone)}
+              </div>
+            </div>
+          )}
 
           {park.lastActivation && (
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">

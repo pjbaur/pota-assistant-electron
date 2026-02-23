@@ -68,6 +68,36 @@ function formatDuration(startTime: string, endTime: string): string {
   return `${mins}m`;
 }
 
+/**
+ * Format timezone for display
+ */
+function formatTimezone(timezone: string): { city: string; abbreviation: string; offset: string } {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(new Date());
+    const tzNamePart = parts.find((p) => p.type === 'timeZoneName');
+    const abbreviation = tzNamePart?.value ?? timezone;
+
+    const cityPart = timezone.split('/').pop()?.replace(/_/g, ' ') ?? timezone;
+
+    // Get UTC offset
+    const now = new Date();
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const diffMinutes = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const sign = diffMinutes >= 0 ? '+' : '-';
+    const offset = `UTC${sign}${hours}`;
+
+    return { city: cityPart, abbreviation, offset };
+  } catch {
+    return { city: timezone, abbreviation: timezone, offset: '' };
+  }
+}
+
 export function PlanDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -596,6 +626,40 @@ export function PlanDetail(): JSX.Element {
                   </p>
                 </div>
               </div>
+
+              {park?.timezone && (
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-slate-600 dark:text-slate-400"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Park Timezone</p>
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {(() => {
+                        const tz = formatTimezone(park.timezone);
+                        return `${tz.city} (${tz.abbreviation})`;
+                      })()}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Times shown in your local timezone
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 

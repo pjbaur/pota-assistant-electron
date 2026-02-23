@@ -10,6 +10,28 @@ export interface DateTimeData {
 export interface StepDatetimeProps {
   data: DateTimeData;
   onChange: (data: DateTimeData) => void;
+  /** Optional park timezone (IANA identifier) */
+  parkTimezone?: string;
+}
+
+/**
+ * Format timezone for display
+ */
+function formatTimezone(timezone: string): { city: string; abbreviation: string } {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(new Date());
+    const tzNamePart = parts.find((p) => p.type === 'timeZoneName');
+    const abbreviation = tzNamePart?.value ?? timezone;
+
+    const cityPart = timezone.split('/').pop()?.replace(/_/g, ' ') ?? timezone;
+    return { city: cityPart, abbreviation };
+  } catch {
+    return { city: timezone, abbreviation: timezone };
+  }
 }
 
 const DURATION_OPTIONS = [
@@ -23,13 +45,18 @@ const DURATION_OPTIONS = [
   { value: '8', label: '8 hours' },
 ];
 
-export function StepDatetime({ data, onChange }: StepDatetimeProps): JSX.Element {
+export function StepDatetime({ data, onChange, parkTimezone }: StepDatetimeProps): JSX.Element {
   const [duration, setDuration] = useState<string>('3');
 
   const today = useMemo(() => {
     const now = new Date();
     return now.toISOString().split('T')[0];
   }, []);
+
+  const timezoneInfo = useMemo(() => {
+    if (!parkTimezone) return null;
+    return formatTimezone(parkTimezone);
+  }, [parkTimezone]);
 
   const handleDateChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,6 +149,31 @@ export function StepDatetime({ data, onChange }: StepDatetimeProps): JSX.Element
 
         <Input label="End Time" type="time" value={data.endTime} disabled />
       </div>
+
+      {timezoneInfo && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>
+              Park timezone: <strong>{timezoneInfo.city}</strong> ({timezoneInfo.abbreviation}).
+              Times shown in your local timezone.
+            </span>
+          </div>
+        </div>
+      )}
 
       {data.date && data.startTime && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">

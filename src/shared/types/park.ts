@@ -57,6 +57,8 @@ export interface Park {
   isFavorite: boolean;
   /** ISO date when record was last modified */
   updatedAt: ISODateString;
+  /** IANA timezone identifier (e.g., "America/Denver") computed from lat/lon */
+  timezone?: string;
 }
 
 /** Search parameters for parks */

@@ -196,7 +196,13 @@ export function NewPlan(): JSX.Element {
       case 'park':
         return <StepPark selectedPark={selectedPark} onParkSelect={handleParkSelect} />;
       case 'datetime':
-        return <StepDatetime data={datetime} onChange={handleDatetimeChange} />;
+        return (
+          <StepDatetime
+            data={datetime}
+            onChange={handleDatetimeChange}
+            parkTimezone={selectedPark?.timezone}
+          />
+        );
       case 'equipment':
         return (
           <StepEquipment selectedPreset={selectedEquipment} onPresetSelect={handlePresetSelect} />

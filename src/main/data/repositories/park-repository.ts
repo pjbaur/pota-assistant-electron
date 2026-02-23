@@ -11,6 +11,7 @@ import {
   executeScalar,
   saveDatabase,
 } from '../../database/connection';
+import { getTimezone } from '../../services/timezone-service';
 import type {
   Park,
   ParkReference,
@@ -33,6 +34,7 @@ interface ParkRow {
   location_desc: string | null;
   is_active: number;
   is_favorite: number;
+  timezone: string | null;
 }
 
 /**
@@ -50,6 +52,7 @@ function rowToPark(row: ParkRow): Park {
     activationCount: 0, // Not stored in current schema
     isFavorite: row.is_favorite === 1,
     updatedAt: new Date().toISOString() as Park['updatedAt'],
+    timezone: row.timezone ?? undefined,
   };
 }
 
@@ -123,12 +126,39 @@ export function searchParks(params: ParkSearchParams): ParkSearchResult {
 
 /**
  * Get a single park by reference
+ * Implements lazy-loading of timezone: computes and caches if missing.
  */
 export function getParkByReference(reference: ParkReference): Park | null {
   const sql = 'SELECT * FROM parks WHERE reference = ? AND is_active = 1';
   const row = executeOne<ParkRow>(sql, [reference]);
 
-  return row !== null ? rowToPark(row) : null;
+  if (row === null) {
+    return null;
+  }
+
+  const park = rowToPark(row);
+
+  // Lazy-load timezone if missing
+  if (park.timezone === undefined && row.latitude !== null && row.longitude !== null) {
+    const computedTimezone = getTimezone(row.latitude, row.longitude);
+    if (computedTimezone !== null) {
+      // Update the database with the computed timezone
+      updateParkTimezone(reference, computedTimezone);
+      park.timezone = computedTimezone;
+    }
+  }
+
+  return park;
+}
+
+/**
+ * Update the timezone for a park
+ */
+export function updateParkTimezone(reference: ParkReference, timezone: string): void {
+  const sql = 'UPDATE parks SET timezone = ? WHERE reference = ?';
+  executeRun(sql, [timezone, reference]);
+  // Note: We don't call saveDatabase() here to avoid excessive disk writes
+  // The timezone will be persisted when the database is next saved
 }
 
 /**
