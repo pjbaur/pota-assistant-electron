@@ -126,6 +126,9 @@ function parseConfigValue<K extends ConfigKey>(
       case 'autoSyncParks':
         return (value === 'true') as UserConfig[K];
 
+      case 'hasCompletedOnboarding':
+        return (value === 'true') as UserConfig[K];
+
       case 'parkCacheDays':
         return (parseInt(value, 10) || DEFAULT_CONFIG.parkCacheDays) as UserConfig[K];
 
@@ -133,6 +136,11 @@ function parseConfigValue<K extends ConfigKey>(
       case 'homeGridSquare':
       case 'lastCsvPath':
         return (value || undefined) as UserConfig[K];
+
+      case 'defaultLatitude':
+      case 'defaultLongitude':
+        const numValue = parseFloat(value);
+        return (isNaN(numValue) ? undefined : numValue) as UserConfig[K];
 
       case 'equipmentPresets':
         if (value === '' || value === '[]') {
