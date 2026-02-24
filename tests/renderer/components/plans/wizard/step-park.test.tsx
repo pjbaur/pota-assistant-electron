@@ -72,7 +72,12 @@ describe('renderer/components/plans/wizard/step-park', () => {
 
     render(<StepPark selectedPark={park} onParkSelect={vi.fn()} />);
 
-    expect(screen.getByText(park.name)).toBeInTheDocument();
-    expect(screen.getByText(`${park.reference} - ${park.gridSquare}`)).toBeInTheDocument();
+    const name = screen.getByText(park.name);
+    const details = screen.getByText(`${park.reference} - ${park.gridSquare}`);
+
+    expect(name).toBeInTheDocument();
+    expect(details).toBeInTheDocument();
+    expect(name).toHaveClass('dark:text-emerald-100');
+    expect(details).toHaveClass('dark:text-emerald-300');
   });
 });

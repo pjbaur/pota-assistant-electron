@@ -154,7 +154,7 @@ export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Ele
       </div>
 
       {selectedPark && (
-        <div className="rounded-lg border border-success-200 bg-success-50 p-4 dark:border-success-800 dark:bg-success-900/20">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-900/30">
           <div className="flex items-start gap-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -166,16 +166,16 @@ export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Ele
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="mt-0.5 text-success-600 dark:text-success-400"
+              className="mt-0.5 text-emerald-600 dark:text-emerald-400"
             >
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
             <div>
-              <div className="font-medium text-success-900 dark:text-success-100">
+              <div className="font-medium text-emerald-900 dark:text-emerald-100">
                 {selectedPark.name}
               </div>
-              <div className="mt-1 text-sm text-success-700 dark:text-success-300">
+              <div className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
                 {selectedPark.reference} - {selectedPark.gridSquare}
               </div>
             </div>
