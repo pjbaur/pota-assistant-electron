@@ -1870,13 +1870,13 @@ Use these workstreams to split implementation across multiple contributors while
 - Depends on: Workstream A; benefits from Workstream C test helpers/data patterns
 - Can run in parallel with: Workstreams B and C
 
-### [ ] Workstream E: Renderer Unit/Component Coverage
+### [x] Workstream E: Renderer Unit/Component Coverage
 
 - Scope: Phase 6 + Phase 7 (items 25-40)
 - Output: Store, hook, component, page, and renderer integration tests under `tests/renderer/**` and `tests/integration/**`
 - Depends on: Workstream A
 - Can run in parallel with: Workstreams B, C, and D
-- Status update (2026-02-24): Phase 6 (items 25-35, renderer stores/hooks) is complete. Phase 7 (items 36-40) remains.
+- Status update (2026-02-24): Phase 6 (items 25-35, renderer stores/hooks) is complete. Phase 7 (items 36-40) is complete.
 
 ### [ ] Workstream F: E2E and CI Stabilization
 
