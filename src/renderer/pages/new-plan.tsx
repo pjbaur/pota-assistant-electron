@@ -35,6 +35,7 @@ interface TimeParts {
 
 interface DateTimeSummary {
   localLabel: string;
+  localTimezoneInfo: string;
   localDate: string;
   localTimeRange: string;
   utcDate: string;
@@ -214,6 +215,59 @@ function getLocalSummaryLabel(park: Park | null): string {
   return 'Local Time';
 }
 
+/**
+ * Get timezone abbreviation (e.g., "MST", "EST")
+ */
+function getTimezoneAbbreviation(timezone: string): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(new Date());
+    const tzNamePart = parts.find((p) => p.type === 'timeZoneName');
+    return tzNamePart?.value ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Get UTC offset string (e.g., "UTC-7", "UTC+5:30")
+ */
+function getUtcOffset(timezone: string): string {
+  try {
+    const now = new Date();
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const diffMinutes = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
+
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const minutes = Math.abs(diffMinutes) % 60;
+    const sign = diffMinutes >= 0 ? '+' : '-';
+
+    if (minutes === 0) {
+      return `UTC${sign}${hours}`;
+    }
+    return `UTC${sign}${hours}:${minutes.toString().padStart(2, '0')}`;
+  } catch {
+    return 'UTC?';
+  }
+}
+
+/**
+ * Format timezone info for display (abbreviation and UTC offset)
+ */
+function formatTimezoneInfo(timezone: string | undefined): string {
+  if (!timezone) return '';
+  const abbreviation = getTimezoneAbbreviation(timezone);
+  const offset = getUtcOffset(timezone);
+  if (abbreviation && offset) {
+    return ` (${abbreviation}, ${offset})`;
+  }
+  return '';
+}
+
 function buildDateTimeSummary(datetime: DateTimeData, park: Park | null): DateTimeSummary | null {
   if (!datetime.date || !datetime.startTime || !datetime.endTime) {
     return null;
@@ -235,6 +289,7 @@ function buildDateTimeSummary(datetime: DateTimeData, park: Park | null): DateTi
 
   return {
     localLabel: getLocalSummaryLabel(park),
+    localTimezoneInfo: formatTimezoneInfo(park?.timezone),
     localDate: formatLongDateInZone(startUtc, localTimezone),
     localTimeRange: `${formatTimeInZone(startUtc, localTimezone)} - ${formatTimeInZone(endUtc, localTimezone)}`,
     utcDate: formatLongDateInZone(startUtc, 'UTC'),
@@ -277,7 +332,7 @@ function PreviousSelections({
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <div className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    {datetimeSummary.localLabel}
+                    {datetimeSummary.localLabel}{datetimeSummary.localTimezoneInfo}
                   </div>
                   <div className="font-medium text-slate-900 dark:text-white">
                     {datetimeSummary.localDate}

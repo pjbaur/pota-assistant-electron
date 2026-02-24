@@ -7,9 +7,9 @@ import { useUIStore } from '../../stores/ui-store';
 import type { Park } from '@shared/types';
 
 /**
- * Format timezone for display
+ * Get timezone abbreviation (e.g., "MST", "EST")
  */
-function formatTimezone(timezone: string): string {
+function getTimezoneAbbreviation(timezone: string): string {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
@@ -17,14 +17,42 @@ function formatTimezone(timezone: string): string {
     });
     const parts = formatter.formatToParts(new Date());
     const tzNamePart = parts.find((p) => p.type === 'timeZoneName');
-    const abbreviation = tzNamePart?.value ?? '';
-
-    // Get city name from IANA identifier
-    const cityPart = timezone.split('/').pop()?.replace(/_/g, ' ') ?? '';
-    return `${cityPart} (${abbreviation})`;
+    return tzNamePart?.value ?? '';
   } catch {
-    return timezone;
+    return '';
   }
+}
+
+/**
+ * Get UTC offset string (e.g., "UTC-7", "UTC+5:30")
+ */
+function getUtcOffset(timezone: string): string {
+  try {
+    const now = new Date();
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    const diffMinutes = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
+
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const minutes = Math.abs(diffMinutes) % 60;
+    const sign = diffMinutes >= 0 ? '+' : '-';
+
+    if (minutes === 0) {
+      return `UTC${sign}${hours}`;
+    }
+    return `UTC${sign}${hours}:${minutes.toString().padStart(2, '0')}`;
+  } catch {
+    return 'UTC?';
+  }
+}
+
+/**
+ * Format timezone for display with IANA ID, abbreviation, and UTC offset
+ */
+function formatTimezone(timezone: string): { iana: string; abbreviation: string; offset: string } {
+  const abbreviation = getTimezoneAbbreviation(timezone);
+  const offset = getUtcOffset(timezone);
+  return { iana: timezone, abbreviation, offset };
 }
 
 export interface ParkDetailProps {
@@ -343,8 +371,13 @@ export function ParkDetail({ park, onClose, onFavoriteChange }: ParkDetailProps)
                 </svg>
                 Timezone
               </div>
-              <div className="text-sm text-slate-900 dark:text-white">
-                {formatTimezone(park.timezone)}
+              <div className="space-y-1">
+                <div className="font-mono text-sm text-slate-900 dark:text-white">
+                  {formatTimezone(park.timezone).iana}
+                </div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  {formatTimezone(park.timezone).abbreviation}, {formatTimezone(park.timezone).offset}
+                </div>
               </div>
             </div>
           )}
