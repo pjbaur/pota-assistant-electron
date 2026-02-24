@@ -1863,7 +1863,7 @@ Use these workstreams to split implementation across multiple contributors while
 - Depends on: Workstream A
 - Can run in parallel with: Workstreams B and D
 
-### [ ] Workstream D: Services and IPC
+### [x] Workstream D: Services and IPC
 
 - Scope: Phase 4 + Phase 5 (items 18-24)
 - Output: Service, API client, and IPC handler tests under `tests/main/services/**`, `tests/main/api/**`, `tests/main/ipc/**`
