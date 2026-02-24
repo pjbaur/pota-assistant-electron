@@ -404,7 +404,7 @@ export function renderWithProviders(
 
 ## 5. Unit Tests - Shared Types & Validation
 
-### [ ] 5.1 `tests/shared/types/park.test.ts`
+### [x] 5.1 `tests/shared/types/park.test.ts`
 
 **Source:** `src/shared/types/park.ts`
 
@@ -424,7 +424,7 @@ export function renderWithProviders(
 | `createGridSquare` rejects lowercase first pair | `"dn44"` | Throws Error |
 | `createGridSquare` rejects 3-char incomplete | `"DN4"` | Throws Error |
 
-### [ ] 5.2 `tests/shared/ipc/schemas.test.ts`
+### [x] 5.2 `tests/shared/ipc/schemas.test.ts`
 
 **Source:** `src/shared/ipc/schemas.ts`
 
@@ -503,7 +503,7 @@ export function renderWithProviders(
 | Error with errorCode | `{success: false, error: "msg", errorCode: "NOT_FOUND"}` | Passes |
 | Rejects invalid errorCode | `{success: false, error: "msg", errorCode: "UNKNOWN"}` | Fails |
 
-### [ ] 5.3 `tests/shared/ipc/channels.test.ts`
+### [x] 5.3 `tests/shared/ipc/channels.test.ts`
 
 **Source:** `src/shared/ipc/channels.ts`
 
@@ -514,7 +514,7 @@ export function renderWithProviders(
 | `isValidChannel("")` returns false | false |
 | `isValidEventChannel("event:parks:import:progress")` returns true | true |
 | `isValidEventChannel("parks:search")` returns false (not an event channel) | false |
-| `VALID_CHANNELS` contains exactly 18 entries | 18 |
+| `VALID_CHANNELS` contains exactly 17 entries | 17 |
 | `VALID_EVENT_CHANNELS` contains exactly 3 entries | 3 |
 | All `IPC_CHANNELS` values are strings starting with expected prefixes | Matches pattern |
 
