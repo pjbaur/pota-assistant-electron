@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '../../ui';
 import { useParks } from '../../../hooks/use-parks';
 import type { Park } from '@shared/types';
@@ -9,19 +9,45 @@ export interface StepParkProps {
 }
 
 export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Element {
-  const [searchQuery, setSearchQuery] = useState('');
-  const { parks, favorites, isLoading, error, searchParks } = useParks();
+  const { parks, favorites, filters, isLoading, error, searchParks } = useParks();
+  const [searchQuery, setSearchQuery] = useState(filters.query);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSearchQuery(filters.query);
+  }, [filters.query]);
 
   useEffect(() => {
     // Debounce search
     const timer = setTimeout(() => {
-      if (searchQuery.trim().length >= 2) {
-        void searchParks({ query: searchQuery });
+      const normalizedQuery = searchQuery.trim();
+      if (normalizedQuery.length >= 2) {
+        void searchParks({ query: normalizedQuery });
+      } else if (normalizedQuery.length === 0 && filters.query !== '') {
+        void searchParks({ query: '' });
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchParks]);
+  }, [searchQuery, searchParks, filters.query]);
+
+  useEffect(() => {
+    const inputEl = inputRef.current;
+    if (!inputEl) {
+      return;
+    }
+
+    const handleNativeSearchEvent = () => {
+      setSearchQuery(inputEl.value);
+    };
+
+    // Handles native clear-button clicks on search inputs.
+    inputEl.addEventListener('search', handleNativeSearchEvent);
+
+    return () => {
+      inputEl.removeEventListener('search', handleNativeSearchEvent);
+    };
+  }, []);
 
   const handleParkClick = useCallback(
     (park: Park) => {
@@ -41,10 +67,13 @@ export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Ele
 
       <div className="space-y-4">
         <Input
+          ref={inputRef}
           label="Search Parks"
+          type="search"
           placeholder="Enter park name or reference..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
           leftIcon={
             <svg
               xmlns="http://www.w3.org/2000/svg"

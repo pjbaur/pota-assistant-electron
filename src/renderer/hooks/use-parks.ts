@@ -103,7 +103,18 @@ export function useParks(options: UseParksOptions = {}): {
     }
 
     setLoading(false);
-  }, [parks, totalResults, isLoading, currentPage, pageSize, filters, invoke, setParks, setCurrentPage, setLoading]);
+  }, [
+    parks,
+    totalResults,
+    isLoading,
+    currentPage,
+    pageSize,
+    filters,
+    invoke,
+    setParks,
+    setCurrentPage,
+    setLoading,
+  ]);
 
   const refresh = useCallback(async (): Promise<void> => {
     await searchParks(filters);
@@ -126,7 +137,13 @@ export function useParks(options: UseParksOptions = {}): {
 
   const clearFilters = useCallback((): void => {
     clearFiltersFromStore();
-    void searchParks({});
+    void searchParks({
+      query: '',
+      entity: undefined,
+      program: undefined,
+      isActive: undefined,
+      hasAccessMethod: undefined,
+    });
   }, [clearFiltersFromStore, searchParks]);
 
   useEffect(() => {

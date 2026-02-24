@@ -22,8 +22,7 @@ export function NewPlan(): JSX.Element {
 
   const isEditing = planId !== null;
 
-  const { wizard, setWizardStep, completeWizardStep, resetWizard } =
-    usePlanStore();
+  const { wizard, setWizardStep, completeWizardStep, resetWizard } = usePlanStore();
   const { createPlan, updatePlan } = usePlans();
   const { plan: existingPlan, fetchPlan } = usePlan(planId);
 
@@ -33,6 +32,7 @@ export function NewPlan(): JSX.Element {
     date: '',
     startTime: '09:00',
     endTime: '12:00',
+    timeReference: 'park',
   });
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPreset | null>(null);
   const [selectedBands, setSelectedBands] = useState<BandId[]>([]);
@@ -66,6 +66,7 @@ export function NewPlan(): JSX.Element {
         date: existingPlan.activationDate,
         startTime: existingPlan.startTime,
         endTime: existingPlan.endTime,
+        timeReference: 'park',
       });
       setSelectedEquipment(existingPlan.equipmentPreset ?? null);
       setSelectedBands(existingPlan.bands ?? []);
