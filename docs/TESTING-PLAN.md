@@ -1842,42 +1842,42 @@ jobs:
 
 Use these workstreams to split implementation across multiple contributors while keeping dependency risk low.
 
-### Workstream A: Test Foundation (prerequisite lane)
+### [ ] Workstream A: Test Foundation (prerequisite lane)
 
 - Scope: Phase 1 (items 1-7)
 - Output: Shared setup, fixtures, mocks, render helper, Vitest config updates
 - Dependency: None (must land first)
 - Parallelization note: Keep this lane isolated so downstream lanes can rebase once and proceed independently
 
-### Workstream B: Shared Contracts and Validation
+### [ ] Workstream B: Shared Contracts and Validation
 
 - Scope: Phase 2 (items 8-11)
 - Output: `tests/shared/**` for type factories and IPC schema/channel validation
 - Depends on: Workstream A
 - Can run in parallel with: Workstreams C and D after A is complete
 
-### Workstream C: Main Process Data Layer
+### [ ] Workstream C: Main Process Data Layer
 
 - Scope: Phase 3 (items 12-17)
 - Output: Database and repository tests under `tests/main/database/**` and `tests/main/data/repositories/**`
 - Depends on: Workstream A
 - Can run in parallel with: Workstreams B and D
 
-### Workstream D: Services and IPC
+### [ ] Workstream D: Services and IPC
 
 - Scope: Phase 4 + Phase 5 (items 18-24)
 - Output: Service, API client, and IPC handler tests under `tests/main/services/**`, `tests/main/api/**`, `tests/main/ipc/**`
 - Depends on: Workstream A; benefits from Workstream C test helpers/data patterns
 - Can run in parallel with: Workstreams B and C
 
-### Workstream E: Renderer Unit/Component Coverage
+### [ ] Workstream E: Renderer Unit/Component Coverage
 
 - Scope: Phase 6 + Phase 7 (items 25-40)
 - Output: Store, hook, component, page, and renderer integration tests under `tests/renderer/**` and `tests/integration/**`
 - Depends on: Workstream A
 - Can run in parallel with: Workstreams B, C, and D
 
-### Workstream F: E2E and CI Stabilization
+### [ ] Workstream F: E2E and CI Stabilization
 
 - Scope: Phase 8 (items 41-43)
 - Output: Playwright fixture/tests and CI workflow validation
