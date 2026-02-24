@@ -4,10 +4,12 @@ import type { StateStorage } from 'zustand/middleware';
 import type { Toast } from '../components/ui/toast';
 
 export type Theme = 'light' | 'dark' | 'system';
+export type TemperatureUnit = 'celsius' | 'fahrenheit';
 
 interface UIState {
   theme: Theme;
   resolvedTheme: 'light' | 'dark';
+  temperatureUnit: TemperatureUnit;
   sidebarOpen: boolean;
   sidebarWidth: number;
   isGlobalLoading: boolean;
@@ -17,6 +19,7 @@ interface UIState {
 
 interface UIActions {
   setTheme: (theme: Theme) => void;
+  setTemperatureUnit: (unit: TemperatureUnit) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setSidebarWidth: (width: number) => void;
@@ -43,6 +46,7 @@ const resolveTheme = (theme: Theme): 'light' | 'dark' => {
 const initialState: UIState = {
   theme: 'system',
   resolvedTheme: resolveTheme('system'),
+  temperatureUnit: 'celsius',
   sidebarOpen: true,
   sidebarWidth: 256,
   isGlobalLoading: false,
@@ -96,6 +100,8 @@ export const useUIStore = create<UIStore>()(
         }
       },
 
+      setTemperatureUnit: (temperatureUnit) => set({ temperatureUnit }),
+
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
@@ -124,6 +130,7 @@ export const useUIStore = create<UIStore>()(
       storage: createJSONStorage(getPersistStorage),
       partialize: (state) => ({
         theme: state.theme,
+        temperatureUnit: state.temperatureUnit,
         sidebarOpen: state.sidebarOpen,
         sidebarWidth: state.sidebarWidth,
       }),

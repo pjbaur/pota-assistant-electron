@@ -1,4 +1,5 @@
 export { useTheme } from './use-theme';
+export { useUnits } from './use-units';
 export { useIPC, useIPCListener } from './use-ipc';
 export type { IPCResult, UseIPCOptions } from './use-ipc';
 export { useParks, usePark } from './use-parks';

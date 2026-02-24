@@ -4,21 +4,28 @@
  * Main settings page with sections:
  * - Profile (callsign, location)
  * - Appearance (theme)
+ * - Units (temperature)
  * - Data Management (park import, clear data)
  * - About (app version, credits)
  */
 
-import { useTheme } from '../hooks';
+import { useTheme, useUnits } from '../hooks';
 import { Select } from '../components/ui';
 import { ProfileSection, DataSection } from '../components/settings';
 
 export function Settings(): JSX.Element {
   const { theme, setTheme } = useTheme();
+  const { temperatureUnit, setTemperatureUnit } = useUnits();
 
   const themeOptions = [
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
     { value: 'system', label: 'System' },
+  ];
+
+  const temperatureOptions = [
+    { value: 'celsius', label: 'Celsius (°C)' },
+    { value: 'fahrenheit', label: 'Fahrenheit (°F)' },
   ];
 
   return (
@@ -50,6 +57,28 @@ export function Settings(): JSX.Element {
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               Choose your preferred color scheme
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Units Section */}
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Units</h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Set your preferred measurement units
+        </p>
+
+        <div className="mt-6 space-y-4">
+          <div className="max-w-xs">
+            <Select
+              label="Temperature"
+              options={temperatureOptions}
+              value={temperatureUnit}
+              onChange={(value) => setTemperatureUnit(value as 'celsius' | 'fahrenheit')}
+            />
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              Choose how temperatures are displayed
             </p>
           </div>
         </div>

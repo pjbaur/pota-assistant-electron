@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import type { WeatherData, WeatherCondition, HourlyForecast, DailyForecast } from '@shared/types/weather';
 import { DataFreshness } from './data-freshness';
+import { useUnits } from '../../hooks/use-units';
 
 export interface WeatherWidgetProps {
   weatherData: WeatherData | null;
@@ -74,8 +75,10 @@ function EmptyState(): JSX.Element {
 /** Current conditions display */
 function CurrentConditions({
   hourly,
+  formatTemperature,
 }: {
   hourly: HourlyForecast;
+  formatTemperature: (celsius: number, fahrenheit: number) => string;
 }): JSX.Element {
   const icon = CONDITION_ICONS[hourly.condition];
   const windCardinal = windDirectionToCardinal(hourly.windDirection);
@@ -89,7 +92,7 @@ function CurrentConditions({
         </span>
         <div>
           <div className="text-3xl font-semibold text-slate-900 dark:text-white">
-            {Math.round(hourly.temperatureC)}°
+            {formatTemperature(hourly.temperatureC, hourly.temperatureF)}
           </div>
           <div className="text-sm text-slate-500 dark:text-slate-400">
             {icon.label}
@@ -200,7 +203,15 @@ function CurrentConditions({
 }
 
 /** Daily forecast card */
-function DailyCard({ day, isToday }: { day: DailyForecast; isToday: boolean }): JSX.Element {
+function DailyCard({
+  day,
+  isToday,
+  formatTemperature,
+}: {
+  day: DailyForecast;
+  isToday: boolean;
+  formatTemperature: (celsius: number, fahrenheit: number) => string;
+}): JSX.Element {
   const icon = CONDITION_ICONS[day.condition];
   const dayLabel = isToday ? 'Today' : new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' });
 
@@ -214,10 +225,10 @@ function DailyCard({ day, isToday }: { day: DailyForecast; isToday: boolean }): 
       </span>
       <div className="text-center">
         <span className="text-sm font-medium text-slate-900 dark:text-white">
-          {Math.round(day.tempMaxC)}°
+          {formatTemperature(day.tempMaxC, day.tempMaxF)}
         </span>
         <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
-          {Math.round(day.tempMinC)}°
+          {formatTemperature(day.tempMinC, day.tempMinF)}
         </span>
       </div>
       {day.precipitationProbabilityMax > 0 && (
@@ -234,6 +245,8 @@ export function WeatherWidget({
   isLoading = false,
   className = '',
 }: WeatherWidgetProps): JSX.Element {
+  const { formatTemperature } = useUnits();
+
   // Get current conditions (first hourly entry)
   const currentConditions = useMemo(() => {
     if (weatherData === null || weatherData.hourly.length === 0) {
@@ -279,6 +292,7 @@ export function WeatherWidget({
       <div className="mb-4">
         <CurrentConditions
           hourly={currentConditions}
+          formatTemperature={formatTemperature}
         />
       </div>
 
@@ -293,6 +307,7 @@ export function WeatherWidget({
               key={day.date}
               day={day}
               isToday={day.date === today}
+              formatTemperature={formatTemperature}
             />
           ))}
         </div>
