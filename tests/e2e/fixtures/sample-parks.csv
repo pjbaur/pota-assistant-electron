@@ -1,0 +1,4 @@
+reference,name,active,entityId,locationDesc,latitude,longitude,grid
+US-0001,Yellowstone National Park,1,291,"Wyoming, US",44.4281,-110.5870,DN44qk
+US-0002,Acadia National Park,1,291,"Maine, US",44.3386,-68.2733,FN54bw
+US-0003,Canyon State Park,1,291,"Arizona, US",36.1069,-112.1129,DM46iv

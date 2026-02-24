@@ -1551,7 +1551,7 @@ export async function launchApp(): Promise<{
 }
 ```
 
-### [ ] 16.2 Test Scenarios (12 tests)
+### [x] 16.2 Test Scenarios (12 tests)
 
 #### Test 1: `app-launch.spec.ts` - Application Launch
 
@@ -1833,7 +1833,7 @@ jobs:
 ### Phase 8: E2E & CI
 
 41. Playwright fixture setup
-42. All 12 E2E test files
+42. [x] All 12 E2E test files
 43. GitHub Actions workflow
 
 ---
