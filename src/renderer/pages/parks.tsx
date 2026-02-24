@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { MapContainerComponent } from '../components/map';
 import { ParkCard, ParkDetail, ParkSearch } from '../components/park';
 import { useParks, usePark } from '../hooks/use-parks';
@@ -9,6 +9,7 @@ type ViewMode = 'list' | 'map';
 export function Parks(): JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
 
   const {
     parks,
@@ -16,7 +17,7 @@ export function Parks(): JSX.Element {
     filters,
     isLoading,
     error,
-    totalResults,
+    favorites,
     searchParks,
     selectPark: selectParkFromSearch,
     clearFilters,
@@ -38,6 +39,14 @@ export function Parks(): JSX.Element {
   // Use the full details if available, otherwise fall back to search result
   const selectedPark = selectedParkWithDetails ?? selectedParkFromSearch;
 
+  // Filter parks by favorites when showOnlyFavorites is enabled
+  const displayedParks = useMemo(() => {
+    if (!showOnlyFavorites) {
+      return parks;
+    }
+    return parks.filter((park) => favorites.includes(park.reference));
+  }, [parks, favorites, showOnlyFavorites]);
+
   const selectPark = useCallback(
     (park: Park | null) => {
       selectParkFromSearch(park);
@@ -54,6 +63,7 @@ export function Parks(): JSX.Element {
 
   const handleClearFilters = useCallback(() => {
     clearFilters();
+    setShowOnlyFavorites(false);
   }, [clearFilters]);
 
   const handleSelectPark = useCallback(
@@ -68,6 +78,10 @@ export function Parks(): JSX.Element {
     setShowDetailPanel(false);
     selectPark(null);
   }, [selectPark]);
+
+  const handleToggleFavorites = useCallback(() => {
+    setShowOnlyFavorites((prev) => !prev);
+  }, []);
 
   return (
     <div className="flex h-full">
@@ -86,11 +100,44 @@ export function Parks(): JSX.Element {
 
           <div className="flex items-center gap-2">
             {/* Results count */}
-            {!isLoading && totalResults > 0 && (
+            {!isLoading && displayedParks.length > 0 && (
               <span className="text-sm text-slate-500 dark:text-slate-400">
-                {totalResults.toLocaleString()} parks
+                {displayedParks.length.toLocaleString()} {displayedParks.length === 1 ? 'park' : 'parks'}
+                {showOnlyFavorites && ' (favorites)'}
               </span>
             )}
+
+            {/* Favorites toggle */}
+            <button
+              onClick={handleToggleFavorites}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                showOnlyFavorites
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-white'
+              }`}
+              aria-label={showOnlyFavorites ? 'Show all parks' : 'Show only favorites'}
+              title={showOnlyFavorites ? 'Show all parks' : 'Show only favorites'}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill={showOnlyFavorites ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span className="hidden sm:inline">Favorites</span>
+              {favorites.length > 0 && (
+                <span className="rounded-full bg-amber-200 px-1.5 text-xs font-semibold text-amber-700 dark:bg-amber-800 dark:text-amber-200">
+                  {favorites.length}
+                </span>
+              )}
+            </button>
 
             {/* View mode toggle */}
             <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-700">
@@ -177,7 +224,7 @@ export function Parks(): JSX.Element {
         {viewMode === 'map' ? (
           <div className="flex-1 overflow-hidden rounded-xl shadow-sm">
             <MapContainerComponent
-              parks={parks}
+              parks={displayedParks}
               selectedPark={selectedPark}
               onSelectPark={handleSelectPark}
             />
@@ -193,9 +240,42 @@ export function Parks(): JSX.Element {
                   </p>
                 </div>
               </div>
-            ) : parks.length > 0 ? (
+            ) : showOnlyFavorites && favorites.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-amber-500"
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white">
+                    No Favorites Yet
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Star parks to add them to your favorites for quick access.
+                  </p>
+                  <button
+                    onClick={handleToggleFavorites}
+                    className="mt-4 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  >
+                    Show all parks
+                  </button>
+                </div>
+              </div>
+            ) : displayedParks.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {parks.map((park) => (
+                {displayedParks.map((park) => (
                   <ParkCard
                     key={park.reference}
                     park={park}
