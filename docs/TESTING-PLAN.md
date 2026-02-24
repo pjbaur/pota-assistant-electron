@@ -162,6 +162,8 @@ export default defineConfig({
 
 ## 3. Test File Organization
 
+### [x] 3.1 Create Test Directory and File Scaffolding
+
 ```
 tests/
 ├── setup.ts                                    # Global setup (jest-dom, matchMedia mock)
