@@ -14,7 +14,11 @@ interface RenderWithProvidersOptions {
 }
 
 function resetUIStore(): void {
-  useUIStore.persist?.clearStorage?.();
+  try {
+    useUIStore.persist?.clearStorage?.();
+  } catch {
+    // jsdom localStorage can be unavailable in some test environments.
+  }
   useUIStore.setState({
     theme: 'system',
     resolvedTheme: 'light',
