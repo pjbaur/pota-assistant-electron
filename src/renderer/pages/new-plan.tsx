@@ -22,18 +22,224 @@ interface PreviousSelectionsProps {
   equipment: EquipmentPreset | null;
 }
 
-function formatActivationDate(date: string): string {
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return date;
+interface DateParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface TimeParts {
+  hours: number;
+  minutes: number;
+}
+
+interface DateTimeSummary {
+  localLabel: string;
+  localDate: string;
+  localTimeRange: string;
+  utcDate: string;
+  utcTimeRange: string;
+}
+
+function parseDate(dateStr: string): DateParts | null {
+  const parts = dateStr.split('-');
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    parts.length !== 3
+  ) {
+    return null;
   }
 
-  return parsedDate.toLocaleDateString('en-US', {
+  return { year, month, day };
+}
+
+function parseTime(timeStr: string): TimeParts | null {
+  const parts = timeStr.split(':');
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || parts.length !== 2) {
+    return null;
+  }
+
+  return { hours, minutes };
+}
+
+function formatDateParts(date: DateParts): string {
+  return `${String(date.year).padStart(4, '0')}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+}
+
+function formatDateInZone(timestampMs: number, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date(timestampMs));
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return '';
+  }
+
+  return formatDateParts({ year, month, day });
+}
+
+function formatLongDateInZone(timestampMs: number, timezone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  });
+  }).format(new Date(timestampMs));
+}
+
+function formatTimeInZone(timestampMs: number, timezone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(timestampMs));
+}
+
+function parseOffsetMinutes(offsetLabel: string): number | null {
+  if (offsetLabel === 'GMT' || offsetLabel === 'UTC') {
+    return 0;
+  }
+
+  const match = offsetLabel.match(/(?:GMT|UTC)([+-])(\d{1,2})(?::?(\d{2}))?/);
+  if (!match) {
+    return null;
+  }
+
+  const sign = match[1] === '-' ? -1 : 1;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3] ?? '0');
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  return sign * (hours * 60 + minutes);
+}
+
+function getOffsetMinutesAt(timestampMs: number, timezone: string): number | null {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'shortOffset',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(new Date(timestampMs));
+    const offset = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    return parseOffsetMinutes(offset);
+  } catch {
+    return null;
+  }
+}
+
+function toUtcTimestamp(date: string, time: string, timezone: string): number | null {
+  const dateParts = parseDate(date);
+  const timeParts = parseTime(time);
+
+  if (!dateParts || !timeParts) {
+    return null;
+  }
+
+  const baseUtc = Date.UTC(
+    dateParts.year,
+    dateParts.month - 1,
+    dateParts.day,
+    timeParts.hours,
+    timeParts.minutes,
+    0,
+    0
+  );
+
+  if (timezone === 'UTC') {
+    return baseUtc;
+  }
+
+  const firstOffset = getOffsetMinutesAt(baseUtc, timezone);
+  if (firstOffset === null) {
+    return baseUtc;
+  }
+
+  let adjusted = baseUtc - firstOffset * 60_000;
+  const secondOffset = getOffsetMinutesAt(adjusted, timezone);
+  if (secondOffset !== null && secondOffset !== firstOffset) {
+    adjusted = baseUtc - secondOffset * 60_000;
+  }
+
+  return adjusted;
+}
+
+function timeToMinutes(time: string): number {
+  const parts = parseTime(time);
+  if (!parts) {
+    return 0;
+  }
+
+  return parts.hours * 60 + parts.minutes;
+}
+
+function addDays(date: string, days: number): string {
+  const parts = parseDate(date);
+  if (!parts) {
+    return date;
+  }
+
+  const value = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+  return formatDateInZone(value.getTime(), 'UTC');
+}
+
+function getLocalSummaryLabel(park: Park | null): string {
+  if (park?.timezone) {
+    return 'Park Time';
+  }
+
+  return 'Local Time';
+}
+
+function buildDateTimeSummary(datetime: DateTimeData, park: Park | null): DateTimeSummary | null {
+  if (!datetime.date || !datetime.startTime || !datetime.endTime) {
+    return null;
+  }
+
+  const localTimezone = park?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+  const inputTimezone = datetime.timeReference === 'utc' ? 'UTC' : localTimezone;
+
+  const startUtc = toUtcTimestamp(datetime.date, datetime.startTime, inputTimezone);
+  const endSourceDate =
+    timeToMinutes(datetime.endTime) <= timeToMinutes(datetime.startTime)
+      ? addDays(datetime.date, 1)
+      : datetime.date;
+  const endUtc = toUtcTimestamp(endSourceDate, datetime.endTime, inputTimezone);
+
+  if (startUtc === null || endUtc === null) {
+    return null;
+  }
+
+  return {
+    localLabel: getLocalSummaryLabel(park),
+    localDate: formatLongDateInZone(startUtc, localTimezone),
+    localTimeRange: `${formatTimeInZone(startUtc, localTimezone)} - ${formatTimeInZone(endUtc, localTimezone)}`,
+    utcDate: formatLongDateInZone(startUtc, 'UTC'),
+    utcTimeRange: `${formatTimeInZone(startUtc, 'UTC')} - ${formatTimeInZone(endUtc, 'UTC')}`,
+  };
 }
 
 function PreviousSelections({
@@ -45,6 +251,7 @@ function PreviousSelections({
   const showPark = currentStep === 'datetime' || currentStep === 'equipment' || currentStep === 'bands';
   const showDatetime = currentStep === 'equipment' || currentStep === 'bands';
   const showEquipment = currentStep === 'bands';
+  const datetimeSummary = showDatetime ? buildDateTimeSummary(datetime, park) : null;
 
   if (!showPark && !showDatetime && !showEquipment) {
     return null;
@@ -65,10 +272,36 @@ function PreviousSelections({
 
         {showDatetime && (
           <div className="text-slate-700 dark:text-slate-300">
-            <span className="font-medium">Date & Time:</span>{' '}
-            {datetime.date
-              ? `${formatActivationDate(datetime.date)}, ${datetime.startTime} - ${datetime.endTime}`
-              : 'Not set'}
+            <span className="font-medium">Date & Time:</span>
+            {datetimeSummary ? (
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {datetimeSummary.localLabel}
+                  </div>
+                  <div className="font-medium text-slate-900 dark:text-white">
+                    {datetimeSummary.localDate}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {datetimeSummary.localTimeRange}
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    UTC
+                  </div>
+                  <div className="font-medium text-slate-900 dark:text-white">
+                    {datetimeSummary.utcDate}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {datetimeSummary.utcTimeRange}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <span> Not set</span>
+            )}
           </div>
         )}
 
