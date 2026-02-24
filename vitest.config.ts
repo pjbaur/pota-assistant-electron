@@ -5,7 +5,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
+    environmentMatchGlobs: [['tests/renderer/**', 'jsdom']],
+    setupFiles: ['./tests/setup.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'tests/**/*.spec.ts'],
     exclude: ['tests/e2e/**/*', 'node_modules/**/*'],
     coverage: {
       provider: 'v8',
@@ -16,6 +18,7 @@ export default defineConfig({
         'src/renderer/App.tsx',
         'src/**/*.d.ts',
         'src/**/types.ts',
+        'src/**/index.ts',
       ],
       thresholds: {
         statements: 80,

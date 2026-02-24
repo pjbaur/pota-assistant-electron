@@ -1,5 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -16,19 +15,5 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'electron',
-      use: {
-        // Playwright for Electron requires custom setup
-      },
-    },
-  ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
   },
 });
