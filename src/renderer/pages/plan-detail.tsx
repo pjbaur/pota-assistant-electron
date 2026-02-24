@@ -815,6 +815,8 @@ export function PlanDetail(): JSX.Element {
               <BandPanel
                 recommendations={forecast}
                 plannedBands={plan.bands}
+                activationStartTime={plan.startTime}
+                activationEndTime={plan.endTime}
               />
             ) : (
               <div className="text-sm text-slate-500 dark:text-slate-400">

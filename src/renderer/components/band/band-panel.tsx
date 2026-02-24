@@ -14,6 +14,10 @@ interface BandPanelProps {
   recommendations: DayBandForecast;
   /** Optional list of planned bands to highlight matches */
   plannedBands?: string[];
+  /** Optional activation start time in "HH:mm" format to highlight activation hours */
+  activationStartTime?: string;
+  /** Optional activation end time in "HH:mm" format to highlight activation hours */
+  activationEndTime?: string;
 }
 
 /** Band condition to CSS class mapping */
@@ -43,10 +47,83 @@ function getCurrentHour(): number {
 }
 
 /**
+ * Parse a time string "HH:mm" to get hour and minute
+ */
+function parseTime(timeStr: string): { hour: number; minute: number } | null {
+  const parts = timeStr.split(':');
+  const hour = parseInt(parts[0] ?? '0', 10);
+  const minute = parseInt(parts[1] ?? '0', 10);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || parts.length !== 2) {
+    return null;
+  }
+
+  return { hour, minute };
+}
+
+/**
+ * Get the set of hours that should be highlighted based on activation time.
+ * The end time is rounded up to the nearest hour.
+ * Returns null if no activation times are provided.
+ */
+function getActivationHours(
+  startTime?: string,
+  endTime?: string
+): Set<number> | null {
+  if (!startTime || !endTime) {
+    return null;
+  }
+
+  const start = parseTime(startTime);
+  const end = parseTime(endTime);
+
+  if (!start || !end) {
+    return null;
+  }
+
+  const hours = new Set<number>();
+
+  // Round end time up to the nearest hour if there are any minutes
+  const endHour = end.minute > 0 ? end.hour + 1 : end.hour;
+
+  if (start.hour <= endHour) {
+    // Normal case: activation doesn't cross midnight
+    // e.g., 09:00 - 11:30 => hours 9, 10, 11, 12
+    for (let h = start.hour; h <= endHour; h++) {
+      hours.add(h % 24);
+    }
+  } else {
+    // Overnight activation: crosses midnight
+    // e.g., 22:00 - 02:00 => hours 22, 23, 0, 1, 2
+    for (let h = start.hour; h < 24; h++) {
+      hours.add(h);
+    }
+    for (let h = 0; h <= endHour; h++) {
+      hours.add(h);
+    }
+  }
+
+  return hours;
+}
+
+/**
  * Band Panel - Shows 24-hour timeline with band conditions
  */
-export function BandPanel({ recommendations, plannedBands = [] }: BandPanelProps): JSX.Element {
-  const currentHour = getCurrentHour();
+export function BandPanel({
+  recommendations,
+  plannedBands = [],
+  activationStartTime,
+  activationEndTime,
+}: BandPanelProps): JSX.Element {
+  // Use activation hours if provided, otherwise fall back to current hour
+  const highlightedHours = useMemo(() => {
+    const activationHours = getActivationHours(activationStartTime, activationEndTime);
+    if (activationHours) {
+      return activationHours;
+    }
+    // Fall back to current hour if no activation times provided
+    return new Set([getCurrentHour()]);
+  }, [activationStartTime, activationEndTime]);
 
   // Build a map of hour -> band -> condition for quick lookup
   const conditionMap = useMemo(() => {
@@ -88,7 +165,7 @@ export function BandPanel({ recommendations, plannedBands = [] }: BandPanelProps
                 <th
                   key={hour}
                   className={`text-xs p-1 min-w-[28px] ${
-                    hour === currentHour
+                    highlightedHours.has(hour)
                       ? 'bg-blue-600 text-white'
                       : 'text-slate-400'
                   }`}
@@ -140,7 +217,7 @@ export function BandPanel({ recommendations, plannedBands = [] }: BandPanelProps
                       <td
                         key={hour}
                         className={`p-0.5 ${
-                          hour === currentHour ? 'ring-1 ring-blue-400' : ''
+                          highlightedHours.has(hour) ? 'ring-1 ring-blue-400' : ''
                         }`}
                       >
                         <div
