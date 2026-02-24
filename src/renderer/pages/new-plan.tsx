@@ -15,6 +15,74 @@ import { usePlanStore, type WizardStep } from '../stores/plan-store';
 import { usePlans, usePlan } from '../hooks/use-plans';
 import type { Park, EquipmentPreset, BandId, PlanInput } from '@shared/types';
 
+interface PreviousSelectionsProps {
+  currentStep: WizardStep;
+  park: Park | null;
+  datetime: DateTimeData;
+  equipment: EquipmentPreset | null;
+}
+
+function formatActivationDate(date: string): string {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date;
+  }
+
+  return parsedDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function PreviousSelections({
+  currentStep,
+  park,
+  datetime,
+  equipment,
+}: PreviousSelectionsProps): JSX.Element | null {
+  const showPark = currentStep === 'datetime' || currentStep === 'equipment' || currentStep === 'bands';
+  const showDatetime = currentStep === 'equipment' || currentStep === 'bands';
+  const showEquipment = currentStep === 'bands';
+
+  if (!showPark && !showDatetime && !showEquipment) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+        Selections So Far
+      </h3>
+      <div className="mt-3 space-y-2 text-sm">
+        {showPark && (
+          <div className="text-slate-700 dark:text-slate-300">
+            <span className="font-medium">Park:</span>{' '}
+            {park ? `${park.reference} - ${park.name}` : 'No park selected'}
+          </div>
+        )}
+
+        {showDatetime && (
+          <div className="text-slate-700 dark:text-slate-300">
+            <span className="font-medium">Date & Time:</span>{' '}
+            {datetime.date
+              ? `${formatActivationDate(datetime.date)}, ${datetime.startTime} - ${datetime.endTime}`
+              : 'Not set'}
+          </div>
+        )}
+
+        {showEquipment && (
+          <div className="text-slate-700 dark:text-slate-300">
+            <span className="font-medium">Equipment:</span>{' '}
+            {equipment ? `${equipment.name} (${equipment.powerWatts}W)` : 'Not selected'}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function NewPlan(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -276,7 +344,15 @@ export function NewPlan(): JSX.Element {
         onCreate={handleCreate}
         onGoToStep={handleGoToStep}
       >
-        {renderStep()}
+        <div className="space-y-6">
+          <PreviousSelections
+            currentStep={wizard.currentStep}
+            park={selectedPark}
+            datetime={datetime}
+            equipment={selectedEquipment}
+          />
+          {renderStep()}
+        </div>
       </WizardContainer>
     </div>
   );
