@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import type { StateStorage } from 'zustand/middleware';
 import type { Toast } from '../components/ui/toast';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -49,6 +50,34 @@ const initialState: UIState = {
   toasts: [],
 };
 
+const noopStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => {
+    /* no-op */
+  },
+  removeItem: () => {
+    /* no-op */
+  },
+};
+
+function getPersistStorage(): StateStorage {
+  if (typeof window === 'undefined') {
+    return noopStorage;
+  }
+
+  const storage = window.localStorage as Partial<StateStorage> | undefined;
+  if (
+    storage !== undefined &&
+    typeof storage.getItem === 'function' &&
+    typeof storage.setItem === 'function' &&
+    typeof storage.removeItem === 'function'
+  ) {
+    return storage as StateStorage;
+  }
+
+  return noopStorage;
+}
+
 export type UIStore = UIState & UIActions;
 
 export const useUIStore = create<UIStore>()(
@@ -92,6 +121,7 @@ export const useUIStore = create<UIStore>()(
     }),
     {
       name: 'pota-ui-settings',
+      storage: createJSONStorage(getPersistStorage),
       partialize: (state) => ({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
