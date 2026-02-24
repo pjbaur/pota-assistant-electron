@@ -1842,7 +1842,7 @@ jobs:
 
 Use these workstreams to split implementation across multiple contributors while keeping dependency risk low.
 
-### [ ] Workstream A: Test Foundation (prerequisite lane)
+### [x] Workstream A: Test Foundation (prerequisite lane)
 
 - Scope: Phase 1 (items 1-7)
 - Output: Shared setup, fixtures, mocks, render helper, Vitest config updates
