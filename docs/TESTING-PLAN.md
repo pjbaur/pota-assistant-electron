@@ -266,7 +266,7 @@ tests/
 
 ## 4. Test Helpers & Utilities
 
-### [ ] 4.1 Database Test Helper
+### [x] 4.1 Database Test Helper
 
 **File:** `tests/helpers/db-test-helper.ts`
 
@@ -289,7 +289,7 @@ export function seedEquipmentPresets(db: Database): PresetRow[];
 - `seedPlan()` inserts a plan linked to an existing park
 - `cleanup()` closes database and frees memory
 
-### [ ] 4.2 Test Data Factories
+### [x] 4.2 Test Data Factories
 
 **File:** `tests/helpers/fixtures.ts`
 
@@ -325,7 +325,7 @@ Default park example:
 }
 ```
 
-### [ ] 4.3 Electron Mock
+### [x] 4.3 Electron Mock
 
 **File:** `tests/helpers/mock-electron.ts`
 
@@ -363,7 +363,7 @@ export const mockElectron = {
 };
 ```
 
-### [ ] 4.4 IPC Mock for Renderer
+### [x] 4.4 IPC Mock for Renderer
 
 **File:** `tests/helpers/mock-ipc.ts`
 
@@ -380,7 +380,7 @@ export function setupMockElectronAPI(): {
 - `on` returns an unsubscribe function
 - Includes `channels` and `eventChannels` objects matching `IPC_CHANNELS` and `IPC_EVENT_CHANNELS`
 
-### [ ] 4.5 Custom Render Helper
+### [x] 4.5 Custom Render Helper
 
 **File:** `tests/helpers/render-with-providers.tsx`
 
