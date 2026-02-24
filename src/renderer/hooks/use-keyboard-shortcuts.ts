@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useUIStore } from '../stores/ui-store';
 
 /**
@@ -77,25 +77,28 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsResult {
   }, []);
 
   // Define available shortcuts
-  const shortcuts: KeyboardShortcut[] = [
-    {
-      key: '?',
-      description: 'Show keyboard shortcuts',
-      action: toggleShortcutsDialog,
-    },
-    {
-      key: 'Escape',
-      description: 'Close dialogs',
-      action: closeShortcutsDialog,
-      enabled: shortcutsDialogOpen,
-    },
-    {
-      key: 'b',
-      ctrl: true,
-      description: 'Toggle sidebar',
-      action: toggleSidebar,
-    },
-  ];
+  const shortcuts: KeyboardShortcut[] = useMemo(
+    () => [
+      {
+        key: '?',
+        description: 'Show keyboard shortcuts',
+        action: toggleShortcutsDialog,
+      },
+      {
+        key: 'Escape',
+        description: 'Close dialogs',
+        action: closeShortcutsDialog,
+        enabled: shortcutsDialogOpen,
+      },
+      {
+        key: 'b',
+        ctrl: true,
+        description: 'Toggle sidebar',
+        action: toggleSidebar,
+      },
+    ],
+    [toggleShortcutsDialog, closeShortcutsDialog, shortcutsDialogOpen, toggleSidebar]
+  );
 
   // Global keyboard event handler
   useEffect(() => {
@@ -163,7 +166,7 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsResult {
     return (): void => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [shortcuts, shortcutsDialogOpen, toggleSidebar, toggleShortcutsDialog, closeShortcutsDialog]);
+  }, [shortcuts]);
 
   return {
     shortcutsDialogOpen,

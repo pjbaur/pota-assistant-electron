@@ -393,7 +393,7 @@ async function parseCsvFile(filePath: string, batchSize: number): Promise<void> 
       resolve();
     });
 
-    rl.on('error', (err) => {
+    rl.on('error', (err: Error) => {
       postMessage({
         type: 'error',
         message: err.message,
@@ -401,7 +401,7 @@ async function parseCsvFile(filePath: string, batchSize: number): Promise<void> 
       reject(err);
     });
 
-    fileStream.on('error', (err) => {
+    fileStream.on('error', (err: Error) => {
       postMessage({
         type: 'error',
         message: err.message,

@@ -41,11 +41,12 @@ export function Button({
 }: ButtonProps): JSX.Element {
   const baseStyles =
     'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed';
+  const isDisabled = isLoading || disabled === true;
 
   return (
     <button
       className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
-      disabled={disabled || isLoading}
+      disabled={isDisabled}
       {...props}
     >
       {isLoading ? (

@@ -47,7 +47,7 @@ export function useWeather(
     });
 
     if (result.success && result.data) {
-      setWeatherData(result.data as WeatherData);
+      setWeatherData(result.data);
     } else if (result.error) {
       setError(result.error);
     }

@@ -33,11 +33,7 @@ function transformWeatherData(
   response: Awaited<ReturnType<typeof fetchWeatherData>>,
   params: WeatherRequestParams
 ): WeatherData | null {
-  if (
-    response === null ||
-    response.hourly === undefined ||
-    response.daily === undefined
-  ) {
+  if (response?.hourly === undefined || response?.daily === undefined) {
     return null;
   }
 
@@ -174,11 +170,8 @@ export async function getWeather(
   // Check cache first
   const cached = getCachedWeather(latitude, longitude);
   if (cached !== null) {
-    console.log('[Weather Service] Using cached weather data');
     return cached;
   }
-
-  console.log('[Weather Service] Fetching fresh weather data from API');
 
   // Fetch from API
   const response = await fetchWeatherData(latitude, longitude, params.dailyCount ?? 7);

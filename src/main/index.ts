@@ -67,13 +67,8 @@ function setupContentSecurityPolicy(): void {
  * Initialize database and run migrations
  */
 async function initializeDatabaseLayer(): Promise<void> {
-  console.log('Initializing database...');
   await initializeDatabase();
-  console.log('Database initialized');
-
-  console.log('Running migrations...');
-  const migrationsApplied = runMigrations();
-  console.log(`Applied ${migrationsApplied} migration(s)`);
+  runMigrations();
 }
 
 /**
@@ -179,7 +174,6 @@ function loadRenderer(): void {
   } else {
     // Load from built files in production
     const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
-    console.log('Loading renderer from:', rendererPath);
     mainWindow
       .loadFile(rendererPath)
       .then(() => {
@@ -201,9 +195,7 @@ async function initializeApp(): Promise<void> {
   await initializeDatabaseLayer();
 
   // Register IPC handlers
-  console.log('Registering IPC handlers...');
   registerPlaceholderHandlers();
-  console.log('IPC handlers registered');
 
   // Create application menu
   createApplicationMenu();

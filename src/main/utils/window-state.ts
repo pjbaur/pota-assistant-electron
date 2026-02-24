@@ -24,7 +24,7 @@ const MIN_WIDTH = 1024;
 const MIN_HEIGHT = 600;
 
 // Create store instance
-const store = new Store<WindowStateStore>() as Store<WindowStateStore>;
+const store = new Store<WindowStateStore>();
 
 // Initialize default values if not set
 if (store.get('windowState') === undefined) {

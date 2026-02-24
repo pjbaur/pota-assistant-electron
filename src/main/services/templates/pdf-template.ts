@@ -141,7 +141,7 @@ export async function generatePdfDocument(plan: Plan): Promise<Uint8Array> {
 
     for (const slot of plan.timeSlots) {
       const freq = slot.frequency ? `${slot.frequency} MHz` : '-';
-      const notes = slot.notes || '';
+      const notes = slot.notes ?? '';
       drawText(`${slot.startTime} - ${slot.endTime}`, { font: helveticaBold, size: 10 });
       drawText(`${slot.band} | ${slot.mode} | ${freq}${notes ? ` | ${notes}` : ''}`, { size: 10, indent: 100 });
       y -= 6;

@@ -570,8 +570,6 @@ const csvImportHandler: IpcHandlerFn = async (params): Promise<IpcResponse<unkno
       broadcastImportProgress
     );
 
-    console.log('[CSV Import] Result:', JSON.stringify(result, null, 2));
-
     // Record import metadata
     const filename = filePath.split(/[/\\]/).pop() ?? filePath;
     recordImportMetadata(filename, result.imported);

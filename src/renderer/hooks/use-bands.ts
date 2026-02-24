@@ -47,7 +47,7 @@ export function useBands(date: Date | null): UseBandsResult {
     const result = await invoke('bands:get:recommendations', { date: dateStr });
 
     if (result.success && result.data) {
-      setForecast(result.data as DayBandForecast);
+      setForecast(result.data);
     } else if (result.error) {
       setError(result.error);
     }

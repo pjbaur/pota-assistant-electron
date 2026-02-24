@@ -164,8 +164,6 @@ function hasMultipleStatements(sql: string): boolean {
 function applyMigration(migration: MigrationFile): void {
   const migrationName = migration.name;
 
-  console.log(`Applying migration: ${migration.filename}`);
-
   // Start transaction
   executeRun('BEGIN TRANSACTION');
 
@@ -190,8 +188,6 @@ function applyMigration(migration: MigrationFile): void {
     // Commit transaction
     executeRun('COMMIT');
     saveDatabase();
-
-    console.log(`Migration applied successfully: ${migration.filename}`);
   } catch (error) {
     // Rollback on error
     try {
@@ -292,11 +288,8 @@ export function runMigrations(): number {
   const pending = migrations.filter((m) => !applied.has(m.name));
 
   if (pending.length === 0) {
-    console.log('No pending migrations');
     return 0;
   }
-
-  console.log(`Found ${pending.length} pending migration(s)`);
 
   // Apply each migration in order
   for (const migration of pending) {
