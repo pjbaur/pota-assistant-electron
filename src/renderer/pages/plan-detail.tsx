@@ -71,7 +71,7 @@ function formatDuration(startTime: string, endTime: string): string {
 /**
  * Format timezone for display
  */
-function formatTimezone(timezone: string): { city: string; abbreviation: string; offset: string } {
+function formatTimezone(timezone: string): { city: string; abbreviation: string; offset: string; iana: string } {
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
@@ -83,46 +83,44 @@ function formatTimezone(timezone: string): { city: string; abbreviation: string;
 
     const cityPart = timezone.split('/').pop()?.replace(/_/g, ' ') ?? timezone;
 
-    // Get UTC offset
+    // Get UTC offset using proper timezone offset calculation
     const now = new Date();
-    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-    const diffMinutes = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
-    const hours = Math.floor(Math.abs(diffMinutes) / 60);
-    const sign = diffMinutes >= 0 ? '+' : '-';
-    const offset = `UTC${sign}${hours}`;
+    const tzOffsetMinutes = -new Date(now.toLocaleString('en-US', { timeZone: timezone })).getTimezoneOffset() -
+      -new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTimezoneOffset();
+    const hours = Math.floor(Math.abs(tzOffsetMinutes) / 60);
+    const minutes = Math.abs(tzOffsetMinutes) % 60;
+    const sign = tzOffsetMinutes >= 0 ? '+' : '-';
+    const offset = minutes > 0 ? `UTC${sign}${hours}:${minutes.toString().padStart(2, '0')}` : `UTC${sign}${hours}`;
 
-    return { city: cityPart, abbreviation, offset };
+    return { city: cityPart, abbreviation, offset, iana: timezone };
   } catch {
-    return { city: timezone, abbreviation: timezone, offset: '' };
+    return { city: timezone, abbreviation: timezone, offset: '', iana: timezone };
   }
 }
 
 /**
- * Convert park local time to UTC
+ * Convert park local time to UTC using proper timezone conversion
  */
 function convertToUTC(dateString: string, timeString: string, timezone: string): string {
   try {
-    // Parse the local time components
-    const dateParts = dateString.split('-').map(Number);
-    const timeParts = timeString.split(':').map(Number);
+    const [year, month, day] = dateString.split('-').map(Number);
+    const [hour, minute] = timeString.split(':').map(Number);
 
-    const year = dateParts[0] ?? 0;
-    const month = dateParts[1] ?? 1;
-    const day = dateParts[2] ?? 1;
-    const hour = timeParts[0] ?? 0;
-    const minute = timeParts[1] ?? 0;
+    // Create a date string that we can parse
+    const isoString = `${year}-${(month ?? 1).toString().padStart(2, '0')}-${(day ?? 1).toString().padStart(2, '0')}T${(hour ?? 0).toString().padStart(2, '0')}:${(minute ?? 0).toString().padStart(2, '0')}:00`;
 
-    // Create a date assuming it's in the park's timezone
-    const localDate = new Date(year, month - 1, day, hour, minute);
+    // Get the timezone offset for this specific date/time
+    const tempDate = new Date(isoString);
+    const tzDateStr = tempDate.toLocaleString('en-US', { timeZone: timezone });
+    const tzDate = new Date(tzDateStr);
+    const utcDateStr = tempDate.toLocaleString('en-US', { timeZone: 'UTC' });
+    const utcDate = new Date(utcDateStr);
 
-    // Get the UTC offset for this specific date/time
-    const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
+    // Calculate the offset between the timezone and UTC in milliseconds
     const offsetMs = tzDate.getTime() - utcDate.getTime();
 
-    // Adjust for the timezone offset
-    const utcTime = new Date(localDate.getTime() - offsetMs);
+    // The time in UTC is the local time minus the offset
+    const utcTime = new Date(tempDate.getTime() - offsetMs);
 
     // Format as UTC time string
     const utcHour = utcTime.getUTCHours();
@@ -141,18 +139,19 @@ function convertToUTC(dateString: string, timeString: string, timezone: string):
  */
 function getUTCDate(dateString: string, timezone: string): string {
   try {
-    const dateParts = dateString.split('-').map(Number);
-    const year = dateParts[0] ?? 0;
-    const month = dateParts[1] ?? 1;
-    const day = dateParts[2] ?? 1;
+    const [year, month, day] = dateString.split('-').map(Number);
 
-    const localDate = new Date(year, month - 1, day, 12, 0);
+    // Use noon to avoid date boundary issues
+    const isoString = `${year}-${(month ?? 1).toString().padStart(2, '0')}-${(day ?? 1).toString().padStart(2, '0')}T12:00:00`;
 
-    const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
+    const tempDate = new Date(isoString);
+    const tzDateStr = tempDate.toLocaleString('en-US', { timeZone: timezone });
+    const tzDate = new Date(tzDateStr);
+    const utcDateStr = tempDate.toLocaleString('en-US', { timeZone: 'UTC' });
+    const utcDate = new Date(utcDateStr);
+
     const offsetMs = tzDate.getTime() - utcDate.getTime();
-
-    const utcTime = new Date(localDate.getTime() - offsetMs);
+    const utcTime = new Date(tempDate.getTime() - offsetMs);
 
     return utcTime.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -621,7 +620,14 @@ export function PlanDetail(): JSX.Element {
               {/* Park Local Time */}
               <div>
                 <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                  {park?.timezone ? `Park Local Time (${formatTimezone(park.timezone).abbreviation})` : 'Park Local Time'}
+                  {park?.timezone ? (
+                    <>
+                      Park Local Time
+                      <span className="ml-2 text-slate-500 dark:text-slate-400 font-normal">
+                        ({formatTimezone(park.timezone).abbreviation}, {formatTimezone(park.timezone).offset}, {formatTimezone(park.timezone).iana})
+                      </span>
+                    </>
+                  ) : 'Park Local Time'}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-start gap-3">
@@ -711,7 +717,7 @@ export function PlanDetail(): JSX.Element {
                   <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                     UTC Time
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
                         <svg
@@ -732,7 +738,7 @@ export function PlanDetail(): JSX.Element {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">UTC Date</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Date</p>
                         <p className="font-medium text-slate-900 dark:text-white">
                           {getUTCDate(plan.activationDate, park.timezone)}
                         </p>
@@ -758,45 +764,15 @@ export function PlanDetail(): JSX.Element {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">UTC Time</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Time</p>
                         <p className="font-medium text-slate-900 dark:text-white">
                           {convertToUTC(plan.activationDate, plan.startTime, park.timezone)} - {convertToUTC(plan.activationDate, plan.endTime, park.timezone)}
                         </p>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Timezone Info */}
-              {park?.timezone && (
-                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-slate-600 dark:text-slate-400"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Park Timezone</p>
-                      <p className="font-medium text-slate-900 dark:text-white">
-                        {(() => {
-                          const tz = formatTimezone(park.timezone);
-                          return `${tz.city} (${tz.abbreviation}, ${tz.offset})`;
-                        })()}
-                      </p>
+                    <div className="flex items-start gap-3 invisible">
+                      {/* Spacer to align with Park Local Time grid */}
                     </div>
                   </div>
                 </div>
