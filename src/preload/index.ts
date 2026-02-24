@@ -46,6 +46,8 @@ const requestSchemaMap = {
   [IPC_CHANNELS.PARKS_IMPORT_CSV]: csvImportParamsSchema,
   [IPC_CHANNELS.PARKS_GET_IMPORT_STATUS]: undefined,
   [IPC_CHANNELS.PARKS_TOGGLE_FAVORITE]: toggleFavoriteParamsSchema,
+  [IPC_CHANNELS.PARKS_COUNT_FAVORITES]: undefined,
+  [IPC_CHANNELS.PARKS_LIST_FAVORITES]: undefined,
 
   [IPC_CHANNELS.PLANS_CREATE]: planInputSchema,
   [IPC_CHANNELS.PLANS_GET]: planGetParamsSchema,

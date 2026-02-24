@@ -245,6 +245,23 @@ export function countParks(): number {
 }
 
 /**
+ * Count favorite parks in database
+ */
+export function countFavorites(): number {
+  const result = executeScalar<number>('SELECT COUNT(*) FROM parks WHERE is_active = 1 AND is_favorite = 1');
+  return result ?? 0;
+}
+
+/**
+ * List all favorite park references
+ */
+export function listFavoriteReferences(): ParkReference[] {
+  const sql = 'SELECT reference FROM parks WHERE is_active = 1 AND is_favorite = 1';
+  const rows = executeAll<{ reference: string }>(sql, []);
+  return rows.map((row) => row.reference as ParkReference);
+}
+
+/**
  * Clear all parks (for reimport)
  */
 export function clearAllParks(): void {

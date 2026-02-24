@@ -30,8 +30,8 @@ describe('channel validators', () => {
 });
 
 describe('channel collections', () => {
-  it('VALID_CHANNELS contains exactly 17 entries', () => {
-    expect(VALID_CHANNELS).toHaveLength(17);
+  it('VALID_CHANNELS contains exactly 19 entries', () => {
+    expect(VALID_CHANNELS).toHaveLength(19);
   });
 
   it('VALID_EVENT_CHANNELS contains exactly 3 entries', () => {

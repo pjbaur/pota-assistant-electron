@@ -12,6 +12,8 @@ export const IPC_CHANNELS = {
   PARKS_IMPORT_CSV: 'parks:import:csv',
   PARKS_GET_IMPORT_STATUS: 'parks:import:status',
   PARKS_TOGGLE_FAVORITE: 'parks:favorite:toggle',
+  PARKS_COUNT_FAVORITES: 'parks:favorites:count',
+  PARKS_LIST_FAVORITES: 'parks:favorites:list',
 
   // Plan operations
   PLANS_CREATE: 'plans:create',

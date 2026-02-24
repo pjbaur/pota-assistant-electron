@@ -70,6 +70,8 @@ export interface IpcRequestMap {
   'parks:import:csv': { filePath: string };
   'parks:import:status': void;
   'parks:favorite:toggle': { reference: string };
+  'parks:favorites:count': void;
+  'parks:favorites:list': void;
 
   // Plan operations
   'plans:create': PlanInput;
@@ -109,6 +111,8 @@ export interface IpcResponseMap {
   };
   'parks:import:status': CsvImportStatus;
   'parks:favorite:toggle': ToggleFavoriteResult;
+  'parks:favorites:count': { count: number };
+  'parks:favorites:list': { references: string[] };
 
   // Plan operations
   'plans:create': Plan;

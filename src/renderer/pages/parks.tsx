@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { MapContainerComponent } from '../components/map';
 import { ParkCard, ParkDetail, ParkSearch } from '../components/park';
 import { useParks, usePark } from '../hooks/use-parks';
+import { useIPC } from '../hooks/use-ipc';
+import { useParkStore } from '../stores/park-store';
 import type { Park } from '@shared/types';
 
 type ViewMode = 'list' | 'map';
@@ -9,6 +11,10 @@ type ViewMode = 'list' | 'map';
 export function Parks(): JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+
+  const { invoke } = useIPC();
+  const { setFavorites } = useParkStore();
 
   const {
     parks,
@@ -21,6 +27,25 @@ export function Parks(): JSX.Element {
     selectPark: selectParkFromSearch,
     clearFilters,
   } = useParks({ autoFetch: true });
+
+  // Fetch favorites count and list from database
+  const fetchFavoritesData = useCallback(async (): Promise<void> => {
+    const [countResult, listResult] = await Promise.all([
+      invoke('parks:favorites:count', undefined),
+      invoke('parks:favorites:list', undefined),
+    ]);
+    if (countResult.success && countResult.data) {
+      setFavoritesCount(countResult.data.count);
+    }
+    if (listResult.success && listResult.data) {
+      setFavorites(listResult.data.references);
+    }
+  }, [invoke, setFavorites]);
+
+  // Fetch favorites data on mount
+  useEffect(() => {
+    void fetchFavoritesData();
+  }, [fetchFavoritesData]);
 
   // Fetch full park details (including timezone) when a park is selected
   const {
@@ -74,7 +99,13 @@ export function Parks(): JSX.Element {
     void searchParks({ favoritesOnly: newFavoritesOnly });
   }, [filters.favoritesOnly, searchParks]);
 
+  // Callback when a favorite is toggled in child components
+  const handleFavoriteChange = useCallback(() => {
+    void fetchFavoritesData();
+  }, [fetchFavoritesData]);
+
   const showOnlyFavorites = filters.favoritesOnly === true;
+  const hasFavorites = favoritesCount > 0;
 
   return (
     <div className="flex h-full">
@@ -106,7 +137,9 @@ export function Parks(): JSX.Element {
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 showOnlyFavorites
                   ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-white'
+                  : hasFavorites
+                    ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-500 dark:hover:bg-amber-900/40'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-white'
               }`}
               aria-label={showOnlyFavorites ? 'Show all parks' : 'Show only favorites'}
               title={showOnlyFavorites ? 'Show all parks' : 'Show only favorites'}
@@ -116,7 +149,7 @@ export function Parks(): JSX.Element {
                 width="16"
                 height="16"
                 viewBox="0 0 24 24"
-                fill={showOnlyFavorites ? 'currentColor' : 'none'}
+                fill={showOnlyFavorites || hasFavorites ? 'currentColor' : 'none'}
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -125,6 +158,11 @@ export function Parks(): JSX.Element {
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
               <span className="hidden sm:inline">Favorites</span>
+              {favoritesCount > 0 && (
+                <span className="ml-0.5 rounded-full bg-amber-200 px-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+                  {favoritesCount}
+                </span>
+              )}
             </button>
 
             {/* View mode toggle */}
@@ -235,6 +273,7 @@ export function Parks(): JSX.Element {
                     key={park.reference}
                     park={park}
                     onClick={handleSelectPark}
+                    onFavoriteChange={handleFavoriteChange}
                   />
                 ))}
               </div>
@@ -315,7 +354,7 @@ export function Parks(): JSX.Element {
 
           {/* Side panel */}
           <div className="fixed right-0 top-0 z-50 h-full w-full max-w-md lg:relative lg:z-auto lg:w-[400px] lg:flex-shrink-0">
-            <ParkDetail park={selectedPark} onClose={handleCloseDetail} />
+            <ParkDetail park={selectedPark} onClose={handleCloseDetail} onFavoriteChange={handleFavoriteChange} />
           </div>
         </>
       )}

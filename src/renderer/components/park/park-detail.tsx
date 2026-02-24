@@ -30,6 +30,7 @@ function formatTimezone(timezone: string): string {
 export interface ParkDetailProps {
   park: Park;
   onClose?: () => void;
+  onFavoriteChange?: () => void;
 }
 
 /**
@@ -79,7 +80,7 @@ function getProgramName(programId: string): string {
   return programs[programId] ?? programId;
 }
 
-export function ParkDetail({ park, onClose }: ParkDetailProps): JSX.Element {
+export function ParkDetail({ park, onClose, onFavoriteChange }: ParkDetailProps): JSX.Element {
   const navigate = useNavigate();
   const { invoke } = useIPC();
   const { toggleFavorite: toggleFavoriteInStore, favorites } = useParkStore();
@@ -120,9 +121,10 @@ export function ParkDetail({ park, onClose }: ParkDetailProps): JSX.Element {
           description: park.name,
           variant: 'success',
         });
+        onFavoriteChange?.();
       }
     })();
-  }, [park.reference, park.name, toggleFavoriteInStore, invoke, addToast]);
+  }, [park.reference, park.name, toggleFavoriteInStore, invoke, addToast, onFavoriteChange]);
 
   const handleOpenInPota = useCallback(() => {
     void (async () => {

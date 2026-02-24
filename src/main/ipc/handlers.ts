@@ -251,6 +251,22 @@ const parkToggleFavoriteHandler: IpcHandlerFn = (params): IpcResponse<unknown> =
   return success(result);
 };
 
+/**
+ * Handler for counting favorites
+ */
+const parkCountFavoritesHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  const count = parkRepo.countFavorites();
+  return success({ count });
+};
+
+/**
+ * Handler for listing all favorite references
+ */
+const parkListFavoritesHandler: IpcHandlerFn = (): IpcResponse<unknown> => {
+  const references = parkRepo.listFavoriteReferences();
+  return success({ references });
+};
+
 // ============================================
 // Plan Handlers
 // ============================================
@@ -653,6 +669,14 @@ export function registerAppHandlers(): void {
     {
       channel: IPC_CHANNELS.PARKS_TOGGLE_FAVORITE,
       handler: parkToggleFavoriteHandler,
+    },
+    {
+      channel: IPC_CHANNELS.PARKS_COUNT_FAVORITES,
+      handler: parkCountFavoritesHandler,
+    },
+    {
+      channel: IPC_CHANNELS.PARKS_LIST_FAVORITES,
+      handler: parkListFavoritesHandler,
     },
 
     // Plan operations

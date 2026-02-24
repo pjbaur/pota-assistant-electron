@@ -8,6 +8,7 @@ import type { Park } from '@shared/types';
 export interface ParkCardProps {
   park: Park;
   onClick: (park: Park) => void;
+  onFavoriteChange?: () => void;
 }
 
 /**
@@ -42,7 +43,7 @@ function formatCoordinates(lat: number, lng: number): string {
   return `${absLat.toFixed(4)}° ${latDir}, ${absLng.toFixed(4)}° ${lngDir}`;
 }
 
-export function ParkCard({ park, onClick }: ParkCardProps): JSX.Element {
+export function ParkCard({ park, onClick, onFavoriteChange }: ParkCardProps): JSX.Element {
   const { invoke } = useIPC();
   const { toggleFavorite: toggleFavoriteInStore, favorites } = useParkStore();
   const { addToast } = useUIStore();
@@ -65,10 +66,11 @@ export function ParkCard({ park, onClick }: ParkCardProps): JSX.Element {
             description: park.name,
             variant: 'success',
           });
+          onFavoriteChange?.();
         }
       })();
     },
-    [park.reference, park.name, toggleFavoriteInStore, invoke, addToast]
+    [park.reference, park.name, toggleFavoriteInStore, invoke, addToast, onFavoriteChange]
   );
 
   return (

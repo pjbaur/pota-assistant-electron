@@ -25,6 +25,7 @@ interface ParkState {
 interface ParkActions {
   setParks: (parks: Park[]) => void;
   setSelectedPark: (park: Park | null) => void;
+  setFavorites: (parkIds: string[]) => void;
   addFavorite: (parkId: string) => void;
   removeFavorite: (parkId: string) => void;
   toggleFavorite: (parkId: string) => void;
@@ -60,6 +61,8 @@ export const useParkStore = create<ParkStore>((set) => ({
   setParks: (parks) => set({ parks }),
 
   setSelectedPark: (selectedPark) => set({ selectedPark }),
+
+  setFavorites: (favorites) => set({ favorites }),
 
   addFavorite: (parkId) =>
     set((state) => ({
