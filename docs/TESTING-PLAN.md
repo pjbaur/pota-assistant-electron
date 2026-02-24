@@ -1834,7 +1834,7 @@ jobs:
 
 41. Playwright fixture setup
 42. [x] All 12 E2E test files
-43. GitHub Actions workflow
+43. [x] GitHub Actions workflow
 
 ---
 
