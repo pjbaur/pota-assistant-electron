@@ -1529,7 +1529,7 @@ Uses `renderHook` with mocked IPC to test hooks updating Zustand stores.
 
 ## 16. E2E Tests (Playwright)
 
-### [ ] 16.1 Electron Launch Fixture
+### [x] 16.1 Electron Launch Fixture
 
 **File:** `tests/e2e/fixtures/electron-app.ts`
 
