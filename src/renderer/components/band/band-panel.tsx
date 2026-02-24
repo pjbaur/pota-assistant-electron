@@ -70,7 +70,7 @@ export function BandPanel({ recommendations, plannedBands = [] }: BandPanelProps
   }, [recommendations]);
 
   return (
-    <div className="bg-slate-800 rounded-lg p-4">
+    <div className="bg-slate-800 rounded-lg p-4 isolate">
       <h3 className="text-lg font-semibold text-white mb-4">
         Band Conditions - {recommendations.date}
       </h3>

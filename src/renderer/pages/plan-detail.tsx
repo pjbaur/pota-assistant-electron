@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button, Dialog, DialogContent, DialogTrigger, DialogClose } from '../components/ui';
@@ -113,9 +113,11 @@ export function PlanDetail(): JSX.Element {
     park?.latitude ?? null,
     park?.longitude ?? null
   );
-  const { forecast, isLoading: bandsLoading, error: bandsError } = useBands(
-    plan ? new Date(plan.activationDate) : null
+  const bandsDate = useMemo(
+    () => (plan ? new Date(plan.activationDate) : null),
+    [plan?.activationDate]
   );
+  const { forecast, isLoading: bandsLoading, error: bandsError } = useBands(bandsDate);
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
