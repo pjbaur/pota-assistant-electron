@@ -57,7 +57,7 @@
 
 ## 2. Test Infrastructure Setup
 
-### [ ] 2.1 New Dependencies
+### [x] 2.1 New Dependencies
 
 ```bash
 npm install --save-dev \
@@ -67,7 +67,7 @@ npm install --save-dev \
   jsdom
 ```
 
-### [ ] 2.2 Vitest Configuration Changes
+### [x] 2.2 Vitest Configuration Changes
 
 **File:** `vitest.config.ts`
 
@@ -101,7 +101,7 @@ export default defineConfig({
 });
 ```
 
-### [ ] 2.3 Global Test Setup File
+### [x] 2.3 Global Test Setup File
 
 **File:** `tests/setup.ts`
 
@@ -131,7 +131,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 }));
 ```
 
-### [ ] 2.4 Playwright Configuration Changes
+### [x] 2.4 Playwright Configuration Changes
 
 **File:** `playwright.config.ts`
 
