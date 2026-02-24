@@ -98,6 +98,74 @@ function formatTimezone(timezone: string): { city: string; abbreviation: string;
   }
 }
 
+/**
+ * Convert park local time to UTC
+ */
+function convertToUTC(dateString: string, timeString: string, timezone: string): string {
+  try {
+    // Parse the local time components
+    const dateParts = dateString.split('-').map(Number);
+    const timeParts = timeString.split(':').map(Number);
+
+    const year = dateParts[0] ?? 0;
+    const month = dateParts[1] ?? 1;
+    const day = dateParts[2] ?? 1;
+    const hour = timeParts[0] ?? 0;
+    const minute = timeParts[1] ?? 0;
+
+    // Create a date assuming it's in the park's timezone
+    const localDate = new Date(year, month - 1, day, hour, minute);
+
+    // Get the UTC offset for this specific date/time
+    const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
+    const offsetMs = tzDate.getTime() - utcDate.getTime();
+
+    // Adjust for the timezone offset
+    const utcTime = new Date(localDate.getTime() - offsetMs);
+
+    // Format as UTC time string
+    const utcHour = utcTime.getUTCHours();
+    const utcMinute = utcTime.getUTCMinutes();
+    const ampm = utcHour >= 12 ? 'PM' : 'AM';
+    const displayHour = utcHour % 12 || 12;
+
+    return `${displayHour}:${utcMinute.toString().padStart(2, '0')} ${ampm} UTC`;
+  } catch {
+    return `${timeString} UTC`;
+  }
+}
+
+/**
+ * Get UTC date for a park local date
+ */
+function getUTCDate(dateString: string, timezone: string): string {
+  try {
+    const dateParts = dateString.split('-').map(Number);
+    const year = dateParts[0] ?? 0;
+    const month = dateParts[1] ?? 1;
+    const day = dateParts[2] ?? 1;
+
+    const localDate = new Date(year, month - 1, day, 12, 0);
+
+    const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(localDate.toLocaleString('en-US', { timeZone: timezone }));
+    const offsetMs = tzDate.getTime() - utcDate.getTime();
+
+    const utcTime = new Date(localDate.getTime() - offsetMs);
+
+    return utcTime.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  } catch {
+    return dateString;
+  }
+}
+
 export function PlanDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -549,116 +617,187 @@ export function PlanDetail(): JSX.Element {
             <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
               Schedule
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-slate-600 dark:text-slate-400"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Date</p>
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    {formatDate(plan.activationDate)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-slate-600 dark:text-slate-400"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Time</p>
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    {formatTime(plan.startTime)} - {formatTime(plan.endTime)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-slate-600 dark:text-slate-400"
-                  >
-                    <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Duration</p>
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    {formatDuration(plan.startTime, plan.endTime)}
-                  </p>
-                </div>
-              </div>
-
-              {park?.timezone && (
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-slate-600 dark:text-slate-400"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
+            <div className="space-y-6">
+              {/* Park Local Time */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                  {park?.timezone ? `Park Local Time (${formatTimezone(park.timezone).abbreviation})` : 'Park Local Time'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-slate-600 dark:text-slate-400"
+                      >
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Date</p>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        {formatDate(plan.activationDate)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Park Timezone</p>
-                    <p className="font-medium text-slate-900 dark:text-white">
-                      {(() => {
-                        const tz = formatTimezone(park.timezone);
-                        return `${tz.city} (${tz.abbreviation})`;
-                      })()}
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      Times shown in your local timezone
-                    </p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-slate-600 dark:text-slate-400"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Time</p>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        {formatTime(plan.startTime)} - {formatTime(plan.endTime)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-slate-600 dark:text-slate-400"
+                      >
+                        <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Duration</p>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        {formatDuration(plan.startTime, plan.endTime)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* UTC Time */}
+              {park?.timezone && (
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                    UTC Time
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-primary-600 dark:text-primary-400"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">UTC Date</p>
+                        <p className="font-medium text-slate-900 dark:text-white">
+                          {getUTCDate(plan.activationDate, park.timezone)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-primary-600 dark:text-primary-400"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">UTC Time</p>
+                        <p className="font-medium text-slate-900 dark:text-white">
+                          {convertToUTC(plan.activationDate, plan.startTime, park.timezone)} - {convertToUTC(plan.activationDate, plan.endTime, park.timezone)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Timezone Info */}
+              {park?.timezone && (
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-slate-600 dark:text-slate-400"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Park Timezone</p>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        {(() => {
+                          const tz = formatTimezone(park.timezone);
+                          return `${tz.city} (${tz.abbreviation}, ${tz.offset})`;
+                        })()}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

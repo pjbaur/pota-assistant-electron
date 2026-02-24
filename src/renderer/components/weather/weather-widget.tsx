@@ -89,7 +89,7 @@ function CurrentConditions({
         </span>
         <div>
           <div className="text-3xl font-semibold text-slate-900 dark:text-white">
-            {Math.round(hourly.temperatureC)}\u00B0
+            {Math.round(hourly.temperatureC)}°
           </div>
           <div className="text-sm text-slate-500 dark:text-slate-400">
             {icon.label}
@@ -214,10 +214,10 @@ function DailyCard({ day, isToday }: { day: DailyForecast; isToday: boolean }): 
       </span>
       <div className="text-center">
         <span className="text-sm font-medium text-slate-900 dark:text-white">
-          {Math.round(day.tempMaxC)}\u00B0
+          {Math.round(day.tempMaxC)}°
         </span>
         <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
-          {Math.round(day.tempMinC)}\u00B0
+          {Math.round(day.tempMinC)}°
         </span>
       </div>
       {day.precipitationProbabilityMax > 0 && (
