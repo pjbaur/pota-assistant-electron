@@ -63,6 +63,7 @@ export function useParks(options: UseParksOptions = {}): {
         query: mergedFilters.query,
         entityId: mergedFilters.entity,
         programId: mergedFilters.program,
+        favoritesOnly: mergedFilters.favoritesOnly,
         limit: pageSize,
         offset: 0,
       });
@@ -93,6 +94,7 @@ export function useParks(options: UseParksOptions = {}): {
       query: filters.query,
       entityId: filters.entity,
       programId: filters.program,
+      favoritesOnly: filters.favoritesOnly,
       limit: pageSize,
       offset: currentPage * pageSize,
     });
@@ -143,6 +145,7 @@ export function useParks(options: UseParksOptions = {}): {
       program: undefined,
       isActive: undefined,
       hasAccessMethod: undefined,
+      favoritesOnly: undefined,
     });
   }, [clearFiltersFromStore, searchParks]);
 

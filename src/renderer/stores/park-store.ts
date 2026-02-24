@@ -7,6 +7,7 @@ export interface ParkSearchFilters {
   program?: string;
   isActive?: boolean;
   hasAccessMethod?: string;
+  favoritesOnly?: boolean;
 }
 
 interface ParkState {

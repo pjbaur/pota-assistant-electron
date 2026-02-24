@@ -40,8 +40,7 @@ function buildUseParksReturn(overrides: Record<string, unknown> = {}) {
   return {
     parks: [],
     selectedPark: null,
-    favorites: [],
-    filters: { query: '', entity: undefined, program: undefined },
+    filters: { query: '', entity: undefined, program: undefined, favoritesOnly: undefined },
     isLoading: false,
     error: null,
     totalResults: 0,
