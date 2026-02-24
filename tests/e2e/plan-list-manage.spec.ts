@@ -23,10 +23,10 @@ test('opens a plan from the list and deletes it', async () => {
 
     await expect(page.getByRole('heading', { name: 'E2E Managed Plan' })).toBeVisible();
     await expect(page.getByText('Schedule')).toBeVisible();
-    await expect(page.getByText('Equipment')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByText('Delete Plan')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Delete Plan' })).toBeVisible();
     await page.getByRole('button', { name: 'Delete Plan' }).click();
 
     await expect(page).toHaveURL(/#\/plans$/);

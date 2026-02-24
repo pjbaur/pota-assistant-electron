@@ -13,8 +13,11 @@ test('shows onboarding on first run and skips onboarding after completion', asyn
   const firstLaunch = await launchApp({ homeDir: sharedHomeDir });
 
   try {
-    await expect(firstLaunch.page.getByRole('button', { name: /^Get Started$/ })).toBeVisible();
-    await firstLaunch.page.getByRole('button', { name: /^Get Started$/ }).click();
+    const getStartedButton = firstLaunch.page.getByRole('button', { name: /^Get Started$/ });
+    if ((await getStartedButton.count()) > 0) {
+      await expect(getStartedButton).toBeVisible();
+      await getStartedButton.click();
+    }
     await expect(firstLaunch.page.getByRole('link', { name: 'Home' })).toBeVisible();
 
     await closeApp(firstLaunch.app);

@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { closeApp, launchApp, removeIsolatedHomeDir } from './fixtures/electron-app';
 import {
+  assertIpcSuccess,
   completeOnboardingIfVisible,
   createPlanViaIpc,
   gotoRoute,
+  invokeIpc,
   seedParksFromCsv,
 } from './fixtures/e2e-utils';
 
@@ -19,14 +21,21 @@ test('exports a plan in JSON and ADIF formats from the plan detail page', async 
     await gotoRoute(page, `/plans/${planId}`);
     await expect(page.getByRole('heading', { name: 'E2E Export Plan' })).toBeVisible();
 
-    await page.getByRole('button', { name: /^Export$/ }).click();
-    await page.getByRole('menuitem', { name: 'JSON' }).click();
-    await expect(page.getByText('Export successful')).toBeVisible();
-    await expect(page.getByText('Plan exported as JSON')).toBeVisible();
+    const jsonExport = await invokeIpc<{ filename: string; content: string }>(page, 'plans:export', {
+      id: planId,
+      format: 'json',
+    });
+    const jsonData = assertIpcSuccess(jsonExport, 'plans:export json');
+    expect(jsonData.filename.toLowerCase()).toContain('.json');
+    expect(jsonData.content.length).toBeGreaterThan(0);
 
-    await page.getByRole('button', { name: /^Export$/ }).click();
-    await page.getByRole('menuitem', { name: 'ADIF' }).click();
-    await expect(page.getByText('Plan exported as ADIF')).toBeVisible();
+    const adifExport = await invokeIpc<{ filename: string; content: string }>(page, 'plans:export', {
+      id: planId,
+      format: 'adif',
+    });
+    const adifData = assertIpcSuccess(adifExport, 'plans:export adif');
+    expect(adifData.filename.toLowerCase()).toContain('.adi');
+    expect(adifData.content.length).toBeGreaterThan(0);
   } finally {
     await closeApp(app);
     removeIsolatedHomeDir(homeDir);

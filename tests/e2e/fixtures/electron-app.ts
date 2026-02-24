@@ -34,10 +34,12 @@ function normalizeRoute(route: string): string {
 
 export async function launchApp(options: LaunchAppOptions = {}): Promise<LaunchedApp> {
   const homeDir = options.homeDir ?? createIsolatedHomeDir();
+  const userDataDir = path.join(homeDir, 'user-data');
 
   const xdgConfigHome = path.join(homeDir, '.config');
   const xdgDataHome = path.join(homeDir, '.local', 'share');
 
+  fs.mkdirSync(userDataDir, { recursive: true });
   fs.mkdirSync(xdgConfigHome, { recursive: true });
   fs.mkdirSync(xdgDataHome, { recursive: true });
 
@@ -50,6 +52,7 @@ export async function launchApp(options: LaunchAppOptions = {}): Promise<Launche
       USERPROFILE: homeDir,
       XDG_CONFIG_HOME: xdgConfigHome,
       XDG_DATA_HOME: xdgDataHome,
+      POTA_USER_DATA_DIR: userDataDir,
       ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
       ...options.env,
     },
@@ -68,8 +71,13 @@ export async function launchApp(options: LaunchAppOptions = {}): Promise<Launche
 }
 
 export async function closeApp(app: ElectronApplication): Promise<void> {
-  if (!app.isClosed()) {
+  try {
     await app.close();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/closed/i.test(message)) {
+      throw error;
+    }
   }
 }
 

@@ -67,12 +67,15 @@ export async function ensureSidebarOpen(page: Page): Promise<void> {
     await openSidebarButton.first().click();
   }
 
-  await expect(page.getByRole('link', { name: 'Home' })).toBeVisible();
+  await expect(page.locator('aside').getByRole('link', { name: /^Home$/ })).toBeVisible();
 }
 
 export async function clickSidebarLink(page: Page, linkName: string): Promise<void> {
   await ensureSidebarOpen(page);
-  await page.getByRole('link', { name: linkName }).click();
+  await page
+    .locator('aside')
+    .getByRole('link', { name: new RegExp(`^${escapeForRegExp(linkName)}$`) })
+    .click();
 }
 
 export async function seedParksFromCsv(

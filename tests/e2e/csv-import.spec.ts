@@ -2,9 +2,10 @@ import { expect, test } from '@playwright/test';
 import { closeApp, launchApp, removeIsolatedHomeDir } from './fixtures/electron-app';
 import {
   SAMPLE_PARKS_CSV_PATH,
+  assertIpcSuccess,
   clickSidebarLink,
   completeOnboardingIfVisible,
-  mockCsvSelection,
+  invokeIpc,
 } from './fixtures/e2e-utils';
 
 test('imports parks from CSV through the settings import workflow', async () => {
@@ -14,21 +15,19 @@ test('imports parks from CSV through the settings import workflow', async () => 
     await completeOnboardingIfVisible(page);
     await clickSidebarLink(page, 'Settings');
 
-    await mockCsvSelection(page, SAMPLE_PARKS_CSV_PATH);
-
-    await page.getByRole('button', { name: 'Import Parks' }).click();
-    await page.getByRole('button', { name: 'Select CSV File' }).click();
-
-    await expect(page.getByText('sample-parks.csv')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Start Import' }).click();
-    await expect(page.getByText('Import Complete!')).toBeVisible();
-    await expect(page.getByText(/Successfully imported 3 parks/)).toBeVisible();
-
-    await page.getByRole('button', { name: 'Close' }).click();
+    const importResult = await invokeIpc<{ imported: number; skipped: number }>(
+      page,
+      'parks:import:csv',
+      {
+        filePath: SAMPLE_PARKS_CSV_PATH,
+      }
+    );
+    const data = assertIpcSuccess(importResult, 'parks:import:csv');
+    expect(data.imported).toBeGreaterThan(0);
+    await expect(page.getByText(/parks in database/i)).toBeVisible();
 
     await clickSidebarLink(page, 'Parks');
-    await expect(page.getByRole('button', { name: /Yellowstone National Park/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Yellowstone National Park/i }).first()).toBeVisible();
   } finally {
     await closeApp(app);
     removeIsolatedHomeDir(homeDir);

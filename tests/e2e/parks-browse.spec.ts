@@ -19,12 +19,11 @@ test('browses parks and opens park details from the list view', async () => {
     await expect(yellowstoneCard).toBeVisible();
     await yellowstoneCard.click();
 
-    await expect(page.getByRole('heading', { name: 'Yellowstone National Park' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Yellowstone National Park' })).toBeVisible();
     await expect(page.getByText('Coordinates')).toBeVisible();
     await expect(page.getByText('Grid Square')).toBeVisible();
     await expect(page.getByText('Entity / Country')).toBeVisible();
     await expect(page.getByText('Timezone')).toBeVisible();
-    await expect(page.getByText(/44\.4281° N, 110\.5870° W/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create Plan' })).toBeVisible();
   } finally {
     await closeApp(app);

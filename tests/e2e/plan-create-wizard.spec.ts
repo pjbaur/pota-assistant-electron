@@ -18,8 +18,8 @@ test('creates a new activation plan using the wizard', async () => {
     await expect(page.getByRole('heading', { name: 'New Activation Plan' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Select a Park' })).toBeVisible();
 
-    await page.getByLabel('Search Parks').fill('Yellowstone');
-    await page.getByRole('button', { name: /Yellowstone National Park/i }).click();
+    await page.getByLabel('Search Parks').fill('US-0001');
+    await page.getByRole('button', { name: /US-0001/i }).click();
     await expect(page.getByText(/US-0001 - DN44QK/)).toBeVisible();
 
     await page.getByRole('button', { name: 'Next' }).click();

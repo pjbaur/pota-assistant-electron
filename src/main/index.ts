@@ -27,6 +27,11 @@ let mainWindow: BrowserWindow | null = null;
 // Development mode check
 const isDevelopment =
   process.env['NODE_ENV'] === 'development' || process.env['VITE_DEV_SERVER_URL'] !== undefined;
+const customUserDataPath = process.env['POTA_USER_DATA_DIR'];
+
+if (customUserDataPath !== undefined && customUserDataPath !== '') {
+  app.setPath('userData', customUserDataPath);
+}
 
 /**
  * Set up Content Security Policy

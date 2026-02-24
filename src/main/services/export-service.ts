@@ -107,6 +107,8 @@ function exportAsText(plan: Plan): PlanExportResult {
  */
 function exportAsAdif(plan: Plan): PlanExportResult {
   const lines: string[] = [];
+  const bands = Array.isArray(plan.bands) ? plan.bands : [];
+  const timeSlots = Array.isArray(plan.timeSlots) ? plan.timeSlots : [];
 
   // ADIF header
   lines.push('<ADIF_VER:5>3.1.0');
@@ -130,24 +132,27 @@ function exportAsAdif(plan: Plan): PlanExportResult {
   // Equipment information
   if (plan.equipmentPreset) {
     const equipment = plan.equipmentPreset;
+    const radio = equipment.radio ?? '';
+    const antenna = equipment.antenna ?? '';
+    const mode = equipment.mode ?? '';
     lines.push(`<!-- Equipment: ${equipment.name} -->`);
-    lines.push(`<APP_RADIO:${equipment.radio.length}>${equipment.radio}`);
-    lines.push(`<APP_ANTENNA:${equipment.antenna.length}>${equipment.antenna}`);
+    lines.push(`<APP_RADIO:${radio.length}>${radio}`);
+    lines.push(`<APP_ANTENNA:${antenna.length}>${antenna}`);
     lines.push(`<TX_PWR:${String(equipment.powerWatts).length}>${equipment.powerWatts}`);
-    lines.push(`<MODE:${equipment.mode.length}>${equipment.mode}`);
+    lines.push(`<MODE:${mode.length}>${mode}`);
   }
 
   // Planned bands as comment
-  if (plan.bands.length > 0) {
-    const bandsList = plan.bands.join(', ');
+  if (bands.length > 0) {
+    const bandsList = bands.join(', ');
     lines.push(`<!-- Planned Bands: ${bandsList} -->`);
   }
 
   // Time slots as individual QSO placeholders
-  if (plan.timeSlots.length > 0) {
+  if (timeSlots.length > 0) {
     lines.push('');
     lines.push('<!-- Planned Time Slots -->');
-    for (const slot of plan.timeSlots) {
+    for (const slot of timeSlots) {
       lines.push(`<!-- ${slot.startTime}-${slot.endTime}: ${slot.band} ${slot.mode}${slot.frequency ? ` @ ${slot.frequency}MHz` : ''} -->`);
     }
   }
