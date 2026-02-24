@@ -5,7 +5,7 @@
  * Works offline with embedded timezone boundary data.
  */
 
-import geoTz from 'geo-tz';
+import { find } from 'geo-tz';
 
 /**
  * Get the IANA timezone identifier for a given location.
@@ -15,8 +15,8 @@ import geoTz from 'geo-tz';
  */
 export function getTimezone(latitude: number, longitude: number): string | null {
   try {
-    // geo-tz returns an array of matching timezones, use the first one
-    const result = geoTz(latitude, longitude) as unknown as string[];
+    // geo-tz find() returns an array of matching timezones, use the first one
+    const result = find(latitude, longitude);
     if (Array.isArray(result) && result.length > 0 && result[0] !== undefined) {
       return result[0];
     }

@@ -27,13 +27,16 @@ export default defineConfig({
         },
       },
       {
-        entry: path.resolve(__dirname, 'src/preload/index.ts'),
         onstart(options) {
           options.reload();
         },
         vite: {
           build: {
             outDir: path.resolve(__dirname, 'dist/preload'),
+            emptyOutDir: true,
+            rollupOptions: {
+              external: ['zod'],
+            },
             lib: {
               entry: path.resolve(__dirname, 'src/preload/index.ts'),
               formats: ['cjs'],

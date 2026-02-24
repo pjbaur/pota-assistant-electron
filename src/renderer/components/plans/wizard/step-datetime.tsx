@@ -1,6 +1,22 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Input, Select } from '../../ui';
 
+/**
+ * Format a date string (YYYY-MM-DD) to a localized display string
+ * without timezone conversion issues.
+ */
+function formatDateLocal(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // Create date at local midnight (month is 0-indexed)
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export interface DateTimeData {
   date: string;
   startTime: string;
@@ -197,12 +213,7 @@ export function StepDatetime({ data, onChange, parkTimezone }: StepDatetimeProps
             </svg>
             <div>
               <div className="font-medium text-slate-900 dark:text-white">
-                {new Date(data.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {formatDateLocal(data.date)}
               </div>
               <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {data.startTime} - {data.endTime} ({duration} {parseInt(duration, 10) === 1 ? 'hour' : 'hours'})
