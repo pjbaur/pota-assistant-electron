@@ -63,7 +63,8 @@ function parseTime(timeStr: string): { hour: number; minute: number } | null {
 
 /**
  * Get the set of hours that should be highlighted based on activation time.
- * The end time is rounded up to the nearest hour.
+ * The end time is rounded up to the nearest hour, but if it ends exactly on
+ * an hour, that hour is not included (the activation ends at that time).
  * Returns null if no activation times are provided.
  */
 function getActivationHours(
@@ -83,22 +84,29 @@ function getActivationHours(
 
   const hours = new Set<number>();
 
-  // Round end time up to the nearest hour if there are any minutes
+  // Calculate end hour:
+  // - If end time has minutes (e.g., 11:30), round up to next hour (12)
+  // - If end time is exactly on the hour (e.g., 12:00), don't include that hour
+  //   because the activation ends at that time, not during it
   const endHour = end.minute > 0 ? end.hour + 1 : end.hour;
+  const excludeEndHour = end.minute === 0;
 
   if (start.hour <= endHour) {
     // Normal case: activation doesn't cross midnight
-    // e.g., 09:00 - 11:30 => hours 9, 10, 11, 12
-    for (let h = start.hour; h <= endHour; h++) {
+    // e.g., 09:00 - 12:00 => hours 9, 10, 11 (12 excluded because activation ends at 12:00)
+    // e.g., 09:00 - 11:30 => hours 9, 10, 11, 12 (11:30 rounds up to 12)
+    const limit = excludeEndHour ? endHour - 1 : endHour;
+    for (let h = start.hour; h <= limit; h++) {
       hours.add(h % 24);
     }
   } else {
     // Overnight activation: crosses midnight
-    // e.g., 22:00 - 02:00 => hours 22, 23, 0, 1, 2
+    // e.g., 22:00 - 02:00 => hours 22, 23, 0, 1 (2 excluded because activation ends at 02:00)
     for (let h = start.hour; h < 24; h++) {
       hours.add(h);
     }
-    for (let h = 0; h <= endHour; h++) {
+    const limit = excludeEndHour ? endHour - 1 : endHour;
+    for (let h = 0; h <= limit; h++) {
       hours.add(h);
     }
   }

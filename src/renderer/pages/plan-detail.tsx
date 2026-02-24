@@ -99,32 +99,99 @@ function formatTimezone(timezone: string): { city: string; abbreviation: string;
 }
 
 /**
- * Convert park local time to UTC using proper timezone conversion
+ * Parse a timezone offset string like "GMT-7" or "UTC+5:30" to minutes
+ */
+function parseOffsetMinutes(offsetLabel: string): number | null {
+  if (offsetLabel === 'GMT' || offsetLabel === 'UTC') {
+    return 0;
+  }
+
+  const match = offsetLabel.match(/(?:GMT|UTC)([+-])(\d{1,2})(?::?(\d{2}))?/);
+  if (!match) {
+    return null;
+  }
+
+  const sign = match[1] === '-' ? -1 : 1;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3] ?? '0');
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  return sign * (hours * 60 + minutes);
+}
+
+/**
+ * Get timezone offset in minutes at a specific timestamp
+ */
+function getOffsetMinutesAt(timestampMs: number, timezone: string): number | null {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'shortOffset',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(new Date(timestampMs));
+    const offset = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    return parseOffsetMinutes(offset);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert park local time to UTC timestamp in milliseconds
+ */
+function toUtcTimestamp(dateString: string, timeString: string, timezone: string): number | null {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const [hour, minute] = timeString.split(':').map(Number);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day) ||
+      !Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+
+  // Create a UTC timestamp assuming the input time is in UTC
+  const baseUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+
+  if (timezone === 'UTC') {
+    return baseUtc;
+  }
+
+  // Get the offset at this time and adjust
+  const firstOffset = getOffsetMinutesAt(baseUtc, timezone);
+  if (firstOffset === null) {
+    return baseUtc;
+  }
+
+  // Adjust for the offset
+  let adjusted = baseUtc - firstOffset * 60_000;
+
+  // Check if the offset changed due to DST transition
+  const secondOffset = getOffsetMinutesAt(adjusted, timezone);
+  if (secondOffset !== null && secondOffset !== firstOffset) {
+    adjusted = baseUtc - secondOffset * 60_000;
+  }
+
+  return adjusted;
+}
+
+/**
+ * Convert park local time to UTC and format for display
  */
 function convertToUTC(dateString: string, timeString: string, timezone: string): string {
   try {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const [hour, minute] = timeString.split(':').map(Number);
+    const utcTimestamp = toUtcTimestamp(dateString, timeString, timezone);
+    if (utcTimestamp === null) {
+      return `${timeString} UTC`;
+    }
 
-    // Create a date string that we can parse
-    const isoString = `${year}-${(month ?? 1).toString().padStart(2, '0')}-${(day ?? 1).toString().padStart(2, '0')}T${(hour ?? 0).toString().padStart(2, '0')}:${(minute ?? 0).toString().padStart(2, '0')}:00`;
-
-    // Get the timezone offset for this specific date/time
-    const tempDate = new Date(isoString);
-    const tzDateStr = tempDate.toLocaleString('en-US', { timeZone: timezone });
-    const tzDate = new Date(tzDateStr);
-    const utcDateStr = tempDate.toLocaleString('en-US', { timeZone: 'UTC' });
-    const utcDate = new Date(utcDateStr);
-
-    // Calculate the offset between the timezone and UTC in milliseconds
-    const offsetMs = tzDate.getTime() - utcDate.getTime();
-
-    // The time in UTC is the local time minus the offset
-    const utcTime = new Date(tempDate.getTime() - offsetMs);
-
-    // Format as UTC time string
-    const utcHour = utcTime.getUTCHours();
-    const utcMinute = utcTime.getUTCMinutes();
+    const utcDate = new Date(utcTimestamp);
+    const utcHour = utcDate.getUTCHours();
+    const utcMinute = utcDate.getUTCMinutes();
     const ampm = utcHour >= 12 ? 'PM' : 'AM';
     const displayHour = utcHour % 12 || 12;
 
@@ -139,21 +206,13 @@ function convertToUTC(dateString: string, timeString: string, timezone: string):
  */
 function getUTCDate(dateString: string, timezone: string): string {
   try {
-    const [year, month, day] = dateString.split('-').map(Number);
-
     // Use noon to avoid date boundary issues
-    const isoString = `${year}-${(month ?? 1).toString().padStart(2, '0')}-${(day ?? 1).toString().padStart(2, '0')}T12:00:00`;
+    const utcTimestamp = toUtcTimestamp(dateString, '12:00', timezone);
+    if (utcTimestamp === null) {
+      return dateString;
+    }
 
-    const tempDate = new Date(isoString);
-    const tzDateStr = tempDate.toLocaleString('en-US', { timeZone: timezone });
-    const tzDate = new Date(tzDateStr);
-    const utcDateStr = tempDate.toLocaleString('en-US', { timeZone: 'UTC' });
-    const utcDate = new Date(utcDateStr);
-
-    const offsetMs = tzDate.getTime() - utcDate.getTime();
-    const utcTime = new Date(tempDate.getTime() - offsetMs);
-
-    return utcTime.toLocaleDateString('en-US', {
+    return new Date(utcTimestamp).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',

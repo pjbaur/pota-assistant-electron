@@ -43,21 +43,21 @@ function getHighlightedHours(container: HTMLElement): string[] {
 
 describe('BandPanel', () => {
   describe('activation hours highlighting', () => {
-    it('highlights activation hours based on start and end time', () => {
+    it('highlights activation hours excluding end hour when exactly on the hour', () => {
       const forecast = createMockForecast();
 
       const { container } = render(
         <BandPanel
           recommendations={forecast}
           activationStartTime="09:00"
-          activationEndTime="11:00"
+          activationEndTime="12:00"
         />
       );
 
-      // Hours 09, 10, 11 should be highlighted
+      // Hours 09, 10, 11 should be highlighted (12 excluded because activation ends at 12:00)
       const highlightedHours = getHighlightedHours(container);
 
-      // Should highlight hours 9, 10, 11
+      // Should highlight hours 9, 10, 11 (not 12)
       expect(highlightedHours).toEqual(['09', '10', '11']);
     });
 
@@ -91,11 +91,11 @@ describe('BandPanel', () => {
 
       const highlightedHours = getHighlightedHours(container);
 
-      // Should highlight hours 00, 01, 02, 22, 23 (in DOM order 00-23)
-      expect(highlightedHours.sort()).toEqual(['00', '01', '02', '22', '23']);
+      // Should highlight hours 22, 23, 00, 01 (02 excluded because activation ends at 02:00)
+      expect(highlightedHours.sort()).toEqual(['00', '01', '22', '23']);
     });
 
-    it('highlights single hour when start and end are the same hour', () => {
+    it('highlights single hour when start and end are the same hour with minutes', () => {
       const forecast = createMockForecast();
 
       const { container } = render(
@@ -110,6 +110,23 @@ describe('BandPanel', () => {
 
       // Should highlight hours 9 and 10 (09:30 rounds up to 10)
       expect(highlightedHours).toEqual(['09', '10']);
+    });
+
+    it('highlights no hours when start equals end exactly', () => {
+      const forecast = createMockForecast();
+
+      const { container } = render(
+        <BandPanel
+          recommendations={forecast}
+          activationStartTime="09:00"
+          activationEndTime="09:00"
+        />
+      );
+
+      const highlightedHours = getHighlightedHours(container);
+
+      // Should highlight no hours (zero duration)
+      expect(highlightedHours).toEqual([]);
     });
 
     it('falls back to current hour when no activation times provided', () => {
