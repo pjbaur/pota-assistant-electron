@@ -1142,29 +1142,29 @@ Help
 - [x] Basic window and navigation (sidebar, routing, layout components)
 - [x] Theme system (dark/light/system toggle)
 
-### Phase 2: Core Features — IN PROGRESS
+### Phase 2: Core Features — COMPLETE
 
 **Timeline:** Q1-Q2 2026
 **Focus:** Primary workflows
 
 **Features:**
-- [ ] Park CSV import (worker thread with progress UI)
+- [x] Park CSV import (worker thread with progress UI)
 - [x] Park search backend (repository + IPC handlers)
-- [ ] Park map display (Leaflet integration)
+- [x] Park map display (Leaflet integration)
 - [x] Plan CRUD backend (repository + IPC handlers)
-- [ ] Plan creation wizard (multi-step UI)
-- [ ] Plan list and detail views
-- [ ] Settings screens
+- [x] Plan creation wizard (multi-step UI)
+- [x] Plan list and detail views
+- [x] Settings screens
 
-### Phase 3: Intelligence
+### Phase 3: Intelligence — COMPLETE
 
 **Timeline:** Q2 2026
 **Focus:** Data enrichment
 
 **Features:**
-- [ ] Weather integration
-- [ ] Band recommendations
-- [ ] Plan generation with all data
+- [x] Weather integration
+- [x] Band recommendations
+- [x] Plan generation with all data
 
 ### Phase 4: Polish
 
@@ -1174,8 +1174,8 @@ Help
 **Features:**
 - [x] Export functionality (JSON/ADIF backend handlers complete)
 - [ ] Offline mode indicators
-- [ ] Keyboard shortcuts
-- [ ] System integration
+- [x] Keyboard shortcuts
+- [x] System integration
 - [ ] Auto-update
 
 ### Phase 5: Enhancement (Post-MVP)
@@ -1188,7 +1188,7 @@ Help
 - [ ] ADIF import/export
 - [ ] Real-time propagation (VOACAP)
 - [ ] Statistics dashboard
-- [ ] PDF export
+- [x] PDF export
 
 ---
 
