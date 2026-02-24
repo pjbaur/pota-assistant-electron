@@ -144,7 +144,12 @@ function hasMultipleStatements(sql: string): boolean {
     const char = sql[i];
 
     if (inString) {
-      if (char === stringChar && sql[i - 1] !== '\\') {
+      if (char === stringChar && (i === 0 || sql[i - 1] !== '\\')) {
+        // Handle SQL escaped quotes represented by doubled quote characters.
+        if (i + 1 < sql.length && sql[i + 1] === stringChar) {
+          i++;
+          continue;
+        }
         inString = false;
       }
     } else if (char === "'" || char === '"') {
@@ -216,7 +221,9 @@ function splitSqlStatements(sql: string): string[] {
       if (char === stringChar && (i === 0 || sql[i - 1] !== '\\')) {
         // Check if this is an escaped quote (doubled)
         if (i + 1 < sql.length && sql[i + 1] === stringChar) {
-          // It's a doubled quote, keep going
+          // It's a doubled quote; include the second quote and keep parsing the string.
+          current += stringChar;
+          i++;
           continue;
         }
         inString = false;

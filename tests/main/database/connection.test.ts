@@ -1,327 +1,377 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'fs';
-import * as path from 'path';
 import * as os from 'os';
+import * as path from 'path';
+import initSqlJs from 'sql.js';
+import type { Database } from 'sql.js';
 
-// Mock electron module
+const { getPathMock } = vi.hoisted(() => ({
+  getPathMock: vi.fn(),
+}));
+
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => path.join(os.tmpdir(), 'pota-test-' + Date.now())),
+    getPath: getPathMock,
     on: vi.fn(),
   },
 }));
 
-// Helper to load sql.js with WASM binary for Node.js/Electron environment
-async function loadSqlJs(): Promise<import('sql.js').SqlJsStatic> {
-  const initSqlJs = (await import('sql.js')).default;
-  const wasmPath = path.join(
-    process.cwd(),
-    'node_modules',
-    'sql.js',
-    'dist',
-    'sql-wasm.wasm'
-  );
-  const wasmBuffer = fs.readFileSync(wasmPath);
-  const wasmBinary = wasmBuffer.buffer.slice(
-    wasmBuffer.byteOffset,
-    wasmBuffer.byteOffset + wasmBuffer.byteLength
-  );
-  return initSqlJs({ wasmBinary });
+type ConnectionModule = typeof import('../../../src/main/database/connection');
+
+const WASM_DIR = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist');
+const WASM_FILE = path.join(WASM_DIR, 'sql-wasm.wasm');
+
+let tempDir = '';
+let previousEnv: NodeJS.ProcessEnv;
+let previousResourcesPath: string | undefined;
+let loadedModule: ConnectionModule | null = null;
+
+function getDbFilePath(): string {
+  return path.join(tempDir, 'pota-planner.db');
 }
 
-describe('Database Connection Module', () => {
-  let tempDir: string;
-  let originalEnv: NodeJS.ProcessEnv;
+async function importConnectionModule(): Promise<ConnectionModule> {
+  loadedModule = await import('../../../src/main/database/connection');
+  return loadedModule;
+}
 
-  beforeEach(() => {
-    // Save original env
-    originalEnv = { ...process.env };
+async function createDatabaseFile(filePath: string, setup: (db: Database) => void): Promise<void> {
+  const wasmBuffer = fs.readFileSync(WASM_FILE);
+  const SQL = await initSqlJs({ wasmBinary: new Uint8Array(wasmBuffer) });
+  const db = new SQL.Database();
 
-    // Create temp directory for tests
-    tempDir = path.join(os.tmpdir(), 'pota-test-' + Date.now());
-    fs.mkdirSync(tempDir, { recursive: true });
+  setup(db);
 
-    // Set test environment
-    process.env['NODE_ENV'] = 'test';
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, Buffer.from(db.export()));
+  db.close();
+}
+
+async function initializeWithImportTable(connection: ConnectionModule): Promise<void> {
+  await connection.initializeDatabase();
+  connection.executeRun(`
+    CREATE TABLE IF NOT EXISTS import_metadata (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename TEXT NOT NULL,
+      rows_imported INTEGER NOT NULL,
+      imported_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+beforeEach(() => {
+  vi.resetModules();
+  vi.restoreAllMocks();
+
+  previousEnv = { ...process.env };
+  previousResourcesPath = process.resourcesPath;
+
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pota-connection-test-'));
+  getPathMock.mockReturnValue(tempDir);
+
+  process.env['NODE_ENV'] = 'test';
+  Object.defineProperty(process, 'resourcesPath', {
+    value: WASM_DIR,
+    configurable: true,
+    writable: true,
   });
 
-  afterEach(() => {
-    // Restore env
-    process.env = originalEnv;
+  loadedModule = null;
+});
 
-    // Cleanup temp directory
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+afterEach(() => {
+  try {
+    if (loadedModule !== null && loadedModule.isDatabaseInitialized()) {
+      loadedModule.closeDatabase();
     }
+  } catch {
+    // Ignore cleanup errors from tests that intentionally break DB operations.
+  }
 
-    // Reset modules
-    vi.resetModules();
+  process.env = previousEnv;
+  Object.defineProperty(process, 'resourcesPath', {
+    value: previousResourcesPath,
+    configurable: true,
+    writable: true,
   });
 
-  describe('sql.js initialization', () => {
-    it('should initialize sql.js successfully', async () => {
-      const SQL = await loadSqlJs();
-      expect(SQL).toBeDefined();
-      expect(SQL.Database).toBeDefined();
+  fs.rmSync(tempDir, { recursive: true, force: true });
+});
+
+describe('main/database/connection', () => {
+  it('initializeDatabase creates a new DB file and returns database instance', async () => {
+    const connection = await importConnectionModule();
+
+    const db = await connection.initializeDatabase();
+    connection.saveDatabase();
+
+    expect(db).toBeDefined();
+    expect(fs.existsSync(getDbFilePath())).toBe(true);
+  });
+
+  it('initializeDatabase loads an existing DB file from disk', async () => {
+    await createDatabaseFile(getDbFilePath(), (db) => {
+      db.run('CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+      db.run('INSERT INTO items (name) VALUES (?)', ['existing-row']);
     });
 
-    it('should create an in-memory database', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-      expect(db).toBeDefined();
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
 
-      // Run a simple query
-      const result = db.exec('SELECT 1 as value');
-      expect(result).toHaveLength(1);
-      expect(result[0]?.values[0]?.[0]).toBe(1);
+    const row = connection.executeOne<{ name: string }>(
+      'SELECT name FROM items WHERE name = ?',
+      ['existing-row']
+    );
+    expect(row).toEqual({ name: 'existing-row' });
+  });
 
-      db.close();
-    });
+  it('initializeDatabase returns the existing singleton instance on second call', async () => {
+    const connection = await importConnectionModule();
 
-    it('should export and import database', async () => {
-      const SQL = await loadSqlJs();
+    const first = await connection.initializeDatabase();
+    const second = await connection.initializeDatabase();
 
-      // Create database with data
-      const db1 = new SQL.Database();
-      db1.run('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)');
-      db1.run('INSERT INTO test (name) VALUES (?)', ['hello']);
+    expect(second).toBe(first);
+  });
 
-      // Export
-      const data = db1.export();
-      db1.close();
+  it('getDatabase throws before initialization', async () => {
+    const connection = await importConnectionModule();
 
-      // Import into new database
-      const db2 = new SQL.Database(data);
-      const result = db2.exec('SELECT name FROM test');
-      expect(result[0]?.values[0]?.[0]).toBe('hello');
+    expect(() => connection.getDatabase()).toThrowError(
+      'Database not initialized. Call initializeDatabase() first.'
+    );
+  });
 
-      db2.close();
+  it('isDatabaseInitialized returns false before and true after initializeDatabase', async () => {
+    const connection = await importConnectionModule();
+    expect(connection.isDatabaseInitialized()).toBe(false);
+
+    await connection.initializeDatabase();
+    expect(connection.isDatabaseInitialized()).toBe(true);
+  });
+
+  it('executeQuery returns QueryExecResult[] for SELECT and [] for no matches', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun('CREATE TABLE parks (id INTEGER PRIMARY KEY, reference TEXT, name TEXT)');
+    connection.executeRun('INSERT INTO parks (id, reference, name) VALUES (?, ?, ?)', [
+      1,
+      'K-0001',
+      'Test Park',
+    ]);
+
+    const found = connection.executeQuery('SELECT reference, name FROM parks WHERE reference = ?', [
+      'K-0001',
+    ]);
+    expect(found).toHaveLength(1);
+    expect(found[0]?.columns).toEqual(['reference', 'name']);
+    expect(found[0]?.values).toEqual([['K-0001', 'Test Park']]);
+
+    const missing = connection.executeQuery('SELECT reference FROM parks WHERE reference = ?', [
+      'K-9999',
+    ]);
+    expect(missing).toEqual([]);
+  });
+
+  it('executeRun returns rows modified count for INSERT and 0 for unmatched UPDATE', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun('CREATE TABLE updates (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)');
+
+    const inserted = connection.executeRun('INSERT INTO updates (value) VALUES (?)', ['hello']);
+    expect(inserted).toBeGreaterThan(0);
+
+    const notUpdated = connection.executeRun('UPDATE updates SET value = ? WHERE id = ?', [
+      'ignored',
+      9999,
+    ]);
+    expect(notUpdated).toBe(0);
+  });
+
+  it('executeScalar returns single value and null for empty result set', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun('CREATE TABLE scalar_test (id INTEGER PRIMARY KEY)');
+    connection.executeRun('INSERT INTO scalar_test (id) VALUES (1), (2), (3)');
+
+    const count = connection.executeScalar<number>('SELECT COUNT(*) FROM scalar_test');
+    expect(count).toBe(3);
+
+    const none = connection.executeScalar<number>(
+      'SELECT id FROM scalar_test WHERE id = ?',
+      [9999]
+    );
+    expect(none).toBeNull();
+  });
+
+  it('executeAll maps rows to objects and returns [] for no rows', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun(
+      'CREATE TABLE metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, watts INTEGER)'
+    );
+    connection.executeRun('INSERT INTO metrics (label, watts) VALUES (?, ?), (?, ?)', [
+      'QRP',
+      5,
+      'Portable',
+      30,
+    ]);
+
+    const rows = connection.executeAll<{ id: number; label: string; watts: number }>(
+      'SELECT id, label, watts FROM metrics ORDER BY id'
+    );
+    expect(rows).toEqual([
+      { id: 1, label: 'QRP', watts: 5 },
+      { id: 2, label: 'Portable', watts: 30 },
+    ]);
+
+    const empty = connection.executeAll<{ id: number }>('SELECT id FROM metrics WHERE id > ?', [
+      100,
+    ]);
+    expect(empty).toEqual([]);
+  });
+
+  it('executeOne returns first row object and null when no rows', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun('CREATE TABLE single_row (id INTEGER PRIMARY KEY, label TEXT)');
+    connection.executeRun('INSERT INTO single_row (id, label) VALUES (1, ?), (2, ?)', [
+      'first',
+      'second',
+    ]);
+
+    const first = connection.executeOne<{ id: number; label: string }>(
+      'SELECT id, label FROM single_row ORDER BY id'
+    );
+    expect(first).toEqual({ id: 1, label: 'first' });
+
+    const missing = connection.executeOne<{ id: number }>(
+      'SELECT id FROM single_row WHERE id = ?',
+      [999]
+    );
+    expect(missing).toBeNull();
+  });
+
+  it('executeTransaction commits all statements atomically', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun('CREATE TABLE tx_commit (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)');
+    connection.executeTransaction([
+      { sql: 'INSERT INTO tx_commit (value) VALUES (?)', params: ['one'] },
+      { sql: 'INSERT INTO tx_commit (value) VALUES (?)', params: ['two'] },
+    ]);
+
+    const count = connection.executeScalar<number>('SELECT COUNT(*) FROM tx_commit');
+    expect(count).toBe(2);
+  });
+
+  it('executeTransaction rolls back all statements if one fails', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun(
+      'CREATE TABLE tx_rollback (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)'
+    );
+
+    expect(() =>
+      connection.executeTransaction([
+        { sql: 'INSERT INTO tx_rollback (value) VALUES (?)', params: ['valid'] },
+        { sql: 'INSERT INTO missing_table (value) VALUES (?)', params: ['boom'] },
+      ])
+    ).toThrow();
+
+    const count = connection.executeScalar<number>('SELECT COUNT(*) FROM tx_rollback');
+    expect(count).toBe(0);
+  });
+
+  it('executeTransaction persists DB by calling save logic on commit', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+
+    connection.executeRun(
+      'CREATE TABLE tx_save (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)'
+    );
+
+    connection.executeTransaction([{ sql: 'INSERT INTO tx_save (value) VALUES (?)', params: ['a'] }]);
+
+    expect(fs.existsSync(getDbFilePath())).toBe(true);
+  });
+
+  it('saveDatabase throws when database is not initialized', async () => {
+    const connection = await importConnectionModule();
+
+    expect(() => connection.saveDatabase()).toThrowError(
+      'Database not initialized. Call initializeDatabase() first.'
+    );
+  });
+
+  it('closeDatabase saves and closes; getDatabase throws afterwards', async () => {
+    const connection = await importConnectionModule();
+    await connection.initializeDatabase();
+    connection.executeRun('CREATE TABLE close_test (id INTEGER PRIMARY KEY)');
+
+    connection.closeDatabase();
+
+    expect(fs.existsSync(getDbFilePath())).toBe(true);
+    expect(() => connection.getDatabase()).toThrowError(
+      'Database not initialized. Call initializeDatabase() first.'
+    );
+  });
+
+  it('recordImportMetadata stores filename and rows imported', async () => {
+    const connection = await importConnectionModule();
+    await initializeWithImportTable(connection);
+
+    connection.recordImportMetadata('parks.csv', 42);
+
+    const latest = connection.executeOne<{ filename: string; rows_imported: number }>(
+      'SELECT filename, rows_imported FROM import_metadata ORDER BY id DESC LIMIT 1'
+    );
+    expect(latest).toEqual({ filename: 'parks.csv', rows_imported: 42 });
+  });
+
+  it('getLatestImportMetadata returns newest entry by imported_at', async () => {
+    const connection = await importConnectionModule();
+    await initializeWithImportTable(connection);
+
+    connection.executeRun(
+      'INSERT INTO import_metadata (filename, rows_imported, imported_at) VALUES (?, ?, ?)',
+      ['older.csv', 10, '2026-01-01 00:00:00']
+    );
+    connection.executeRun(
+      'INSERT INTO import_metadata (filename, rows_imported, imported_at) VALUES (?, ?, ?)',
+      ['newer.csv', 20, '2026-01-02 00:00:00']
+    );
+
+    expect(connection.getLatestImportMetadata()).toEqual({
+      filename: 'newer.csv',
+      rows_imported: 20,
+      imported_at: '2026-01-02 00:00:00',
     });
   });
 
-  describe('Database queries', () => {
-    it('should execute CREATE TABLE statements', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
+  it('getAllImportMetadata returns all entries ordered by imported_at DESC', async () => {
+    const connection = await importConnectionModule();
+    await initializeWithImportTable(connection);
 
-      db.run(`
-        CREATE TABLE IF NOT EXISTS parks (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          reference TEXT UNIQUE NOT NULL,
-          name TEXT NOT NULL
-        )
-      `);
+    connection.executeRun(
+      'INSERT INTO import_metadata (filename, rows_imported, imported_at) VALUES (?, ?, ?)',
+      ['first.csv', 1, '2026-01-01 00:00:00']
+    );
+    connection.executeRun(
+      'INSERT INTO import_metadata (filename, rows_imported, imported_at) VALUES (?, ?, ?)',
+      ['second.csv', 2, '2026-01-02 00:00:00']
+    );
 
-      const result = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='parks'");
-      expect(result).toHaveLength(1);
-
-      db.close();
-    });
-
-    it('should execute INSERT statements', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      db.run('CREATE TABLE parks (id INTEGER PRIMARY KEY, reference TEXT, name TEXT)');
-      db.run('INSERT INTO parks (reference, name) VALUES (?, ?)', ['K-0039', 'Yellowstone NP']);
-
-      const modified = db.getRowsModified();
-      expect(modified).toBe(1);
-
-      db.close();
-    });
-
-    it('should execute SELECT statements', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      db.run('CREATE TABLE parks (id INTEGER PRIMARY KEY, reference TEXT, name TEXT)');
-      db.run('INSERT INTO parks (reference, name) VALUES (?, ?)', ['K-0039', 'Yellowstone NP']);
-
-      const result = db.exec('SELECT * FROM parks WHERE reference = ?', ['K-0039']);
-      expect(result).toHaveLength(1);
-      expect(result[0]?.columns).toEqual(['id', 'reference', 'name']);
-      expect(result[0]?.values).toHaveLength(1);
-      expect(result[0]?.values[0]?.[1]).toBe('K-0039');
-      expect(result[0]?.values[0]?.[2]).toBe('Yellowstone NP');
-
-      db.close();
-    });
-  });
-
-  describe('Migrations table', () => {
-    it('should create migrations table', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS migrations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          applied_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      const result = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'");
-      expect(result).toHaveLength(1);
-
-      db.close();
-    });
-
-    it('should track applied migrations', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS migrations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          applied_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      db.run('INSERT INTO migrations (name) VALUES (?)', ['initial-schema']);
-
-      const result = db.exec('SELECT name FROM migrations');
-      expect(result[0]?.values).toHaveLength(1);
-      expect(result[0]?.values[0]?.[0]).toBe('initial-schema');
-
-      db.close();
-    });
-  });
-
-  describe('Initial schema tables', () => {
-    it('should create all required tables', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      // Create all tables from initial schema
-      db.run(`
-        CREATE TABLE IF NOT EXISTS parks (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          reference TEXT UNIQUE NOT NULL,
-          name TEXT NOT NULL,
-          latitude REAL,
-          longitude REAL,
-          grid_square TEXT,
-          state TEXT,
-          country TEXT,
-          entity_id INTEGER,
-          location_desc TEXT,
-          is_active INTEGER DEFAULT 1,
-          is_favorite INTEGER DEFAULT 0
-        )
-      `);
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS plans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          park_id INTEGER NOT NULL,
-          activation_date TEXT NOT NULL,
-          start_time TEXT,
-          end_time TEXT,
-          equipment_preset_id INTEGER,
-          bands TEXT,
-          notes TEXT,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (park_id) REFERENCES parks(id)
-        )
-      `);
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS weather_cache (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          latitude REAL NOT NULL,
-          longitude REAL NOT NULL,
-          data TEXT NOT NULL,
-          fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS user_config (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        )
-      `);
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS import_metadata (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          filename TEXT NOT NULL,
-          rows_imported INTEGER NOT NULL,
-          imported_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS equipment_presets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          radio TEXT,
-          antenna TEXT,
-          power_watts INTEGER,
-          notes TEXT,
-          is_builtin INTEGER DEFAULT 0
-        )
-      `);
-
-      // Verify all tables exist
-      const tables = db.exec(
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-      );
-      const tableNames = tables[0]?.values.map((v) => v[0] as string) ?? [];
-
-      expect(tableNames).toContain('parks');
-      expect(tableNames).toContain('plans');
-      expect(tableNames).toContain('weather_cache');
-      expect(tableNames).toContain('user_config');
-      expect(tableNames).toContain('import_metadata');
-      expect(tableNames).toContain('equipment_presets');
-
-      db.close();
-    });
-
-    it('should insert built-in equipment presets', async () => {
-      const SQL = await loadSqlJs();
-      const db = new SQL.Database();
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS equipment_presets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          radio TEXT,
-          antenna TEXT,
-          power_watts INTEGER,
-          notes TEXT,
-          is_builtin INTEGER DEFAULT 0
-        )
-      `);
-
-      db.run(
-        'INSERT INTO equipment_presets (name, radio, antenna, power_watts, is_builtin) VALUES (?, ?, ?, ?, 1)',
-        ['QRP Portable', 'Various', 'End-fed halfwave', 5]
-      );
-      db.run(
-        'INSERT INTO equipment_presets (name, radio, antenna, power_watts, is_builtin) VALUES (?, ?, ?, ?, 1)',
-        ['Standard Portable', 'Various', 'Dipole/Vertical', 30]
-      );
-      db.run(
-        'INSERT INTO equipment_presets (name, radio, antenna, power_watts, is_builtin) VALUES (?, ?, ?, ?, 1)',
-        ['Mobile High Power', 'Various', 'Mobile whip', 100]
-      );
-
-      const result = db.exec('SELECT name, power_watts FROM equipment_presets ORDER BY power_watts');
-      expect(result[0]?.values).toHaveLength(3);
-      expect(result[0]?.values[0]?.[0]).toBe('QRP Portable');
-      expect(result[0]?.values[0]?.[1]).toBe(5);
-      expect(result[0]?.values[1]?.[0]).toBe('Standard Portable');
-      expect(result[0]?.values[1]?.[1]).toBe(30);
-      expect(result[0]?.values[2]?.[0]).toBe('Mobile High Power');
-      expect(result[0]?.values[2]?.[1]).toBe(100);
-
-      db.close();
-    });
+    const rows = connection.getAllImportMetadata();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.filename).toBe('second.csv');
+    expect(rows[1]?.filename).toBe('first.csv');
   });
 });

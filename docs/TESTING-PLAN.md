@@ -522,7 +522,7 @@ export function renderWithProviders(
 
 ## 6. Unit Tests - Database Layer
 
-### [ ] 6.1 `tests/main/database/connection.test.ts` (expand existing)
+### [x] 6.1 `tests/main/database/connection.test.ts` (expand existing)
 
 **Source:** `src/main/database/connection.ts`
 
@@ -554,7 +554,7 @@ export function renderWithProviders(
 | `getLatestImportMetadata()` returns most recent by imported_at | Correct record |
 | `getAllImportMetadata()` returns all records DESC by imported_at | Ordered array |
 
-### [ ] 6.2 `tests/main/database/migrator.test.ts`
+### [x] 6.2 `tests/main/database/migrator.test.ts`
 
 **Source:** `src/main/database/migrator.ts`
 
