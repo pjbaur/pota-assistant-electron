@@ -16,7 +16,7 @@ function createUseParksValue(overrides: Record<string, unknown> = {}) {
     parks: [],
     selectedPark: null,
     favorites: [],
-    filters: { query: '', entity: undefined, program: undefined },
+    filters: { query: '', entity: undefined, program: undefined, favoritesOnly: undefined },
     isLoading: false,
     error: null,
     totalResults: 0,
@@ -79,5 +79,44 @@ describe('renderer/components/plans/wizard/step-park', () => {
     expect(details).toBeInTheDocument();
     expect(name).toHaveClass('dark:text-emerald-100');
     expect(details).toHaveClass('dark:text-emerald-300');
+  });
+
+  it('renders favorites toggle button', () => {
+    render(<StepPark selectedPark={null} onParkSelect={vi.fn()} />);
+
+    // The button has a star icon and "Favorites" text (hidden on small screens)
+    const favoritesButton = screen.getByRole('button', { name: /favorites/i });
+    expect(favoritesButton).toBeInTheDocument();
+  });
+
+  it('toggles favorites filter when favorites button is clicked', () => {
+    const searchParks = vi.fn().mockResolvedValue(undefined);
+    useParksMock.mockReturnValue(
+      createUseParksValue({
+        searchParks,
+        favorites: ['K-0039'],
+      })
+    );
+
+    render(<StepPark selectedPark={null} onParkSelect={vi.fn()} />);
+
+    const favoritesButton = screen.getByRole('button', { name: /favorites/i });
+    fireEvent.click(favoritesButton);
+
+    expect(searchParks).toHaveBeenCalledWith({ favoritesOnly: true });
+  });
+
+  it('shows favorites button in active state when filter is enabled', () => {
+    useParksMock.mockReturnValue(
+      createUseParksValue({
+        filters: { query: '', entity: undefined, program: undefined, favoritesOnly: true },
+      })
+    );
+
+    render(<StepPark selectedPark={null} onParkSelect={vi.fn()} />);
+
+    const favoritesButton = screen.getByRole('button', { name: /favorites/i });
+    // When active, the button has yellow styling
+    expect(favoritesButton).toHaveClass('border-yellow-400');
   });
 });

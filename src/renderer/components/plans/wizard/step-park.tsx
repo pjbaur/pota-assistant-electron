@@ -11,25 +11,32 @@ export interface StepParkProps {
 export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Element {
   const { parks, favorites, filters, isLoading, error, searchParks } = useParks();
   const [searchQuery, setSearchQuery] = useState(filters.query);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(filters.favoritesOnly ?? false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setSearchQuery(filters.query);
   }, [filters.query]);
 
+  const handleToggleFavorites = useCallback(() => {
+    const newValue = !showFavoritesOnly;
+    setShowFavoritesOnly(newValue);
+    void searchParks({ favoritesOnly: newValue || undefined });
+  }, [showFavoritesOnly, searchParks]);
+
   useEffect(() => {
     // Debounce search
     const timer = setTimeout(() => {
       const normalizedQuery = searchQuery.trim();
       if (normalizedQuery.length >= 2) {
-        void searchParks({ query: normalizedQuery });
+        void searchParks({ query: normalizedQuery, favoritesOnly: showFavoritesOnly || undefined });
       } else if (normalizedQuery.length === 0 && filters.query !== '') {
-        void searchParks({ query: '' });
+        void searchParks({ query: '', favoritesOnly: showFavoritesOnly || undefined });
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchParks, filters.query]);
+  }, [searchQuery, searchParks, filters.query, showFavoritesOnly]);
 
   useEffect(() => {
     const inputEl = inputRef.current;
@@ -66,31 +73,60 @@ export function StepPark({ selectedPark, onParkSelect }: StepParkProps): JSX.Ele
       </div>
 
       <div className="space-y-4">
-        <Input
-          ref={inputRef}
-          label="Search Parks"
-          type="search"
-          placeholder="Enter park name or reference..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          leftIcon={
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              ref={inputRef}
+              label="Search Parks"
+              type="search"
+              placeholder="Enter park name or reference..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onInput={(e) => setSearchQuery(e.currentTarget.value)}
+              leftIcon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              }
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleFavorites}
+            className={`mt-6 flex h-[42px] items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
+              showFavoritesOnly
+                ? 'border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
+                : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800'
+            }`}
+            title={showFavoritesOnly ? 'Show all parks' : 'Show only favorites'}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
               height="16"
               viewBox="0 0 24 24"
-              fill="none"
+              fill={showFavoritesOnly ? 'currentColor' : 'none'}
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
-          }
-        />
+            <span className="hidden sm:inline">Favorites</span>
+          </button>
+        </div>
 
         {isLoading && (
           <div className="flex items-center justify-center py-8">
